@@ -122,8 +122,10 @@ cmd_packages() {
 }
 
 cmd_noctalia() {
-  echo "noctalia: not implemented yet" >&2
-  exit 2
+  local script_dir repo_config
+  script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  repo_config=${NOCTALIA_REPO_CONFIG_DIR:-$script_dir/../noctalia/.config/noctalia}
+  python3 -I "$script_dir/check_noctalia.py" "$repo_config" "$STATE_HOME/noctalia/settings.toml"
 }
 
 command_name=${1:-}

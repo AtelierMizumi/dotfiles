@@ -155,6 +155,27 @@ t_packages_qk_missing_files_exits_1() {
   assert_contains "$OUT" "BROKEN PACKAGE: plasma-desktop"
 }
 
+t_noctalia_subcommand_propagates_exit_code() {
+  new_env
+  local good="$T/noctalia-good" bad="$T/noctalia-bad"
+  mkdir -p "$good" "$bad"
+  printf '[theme]\nsync_color_scheme = false\n\n[theme.templates]\nenable_builtin_templates = false\nenable_community_templates = false\n' >"$good/config.toml"
+  printf '[theme]\nsync_color_scheme = true\n' >"$bad/config.toml"
+  export NOCTALIA_REPO_CONFIG_DIR="$good"
+  run noctalia
+  assert_eq "$CODE" 0 "good config, output: $OUT $ERR"
+  export NOCTALIA_REPO_CONFIG_DIR="$bad"
+  run noctalia
+  assert_eq "$CODE" 1 "bad config"
+  assert_contains "$OUT" "SYNC_COLOR_SCHEME NOT FALSE"
+  mkdir -p "$XDG_STATE_HOME/noctalia"
+  printf '[theme]\nsync_color_scheme = true\n' >"$XDG_STATE_HOME/noctalia/settings.toml"
+  export NOCTALIA_REPO_CONFIG_DIR="$good"
+  run noctalia
+  assert_eq "$CODE" 1 "GUI override under XDG_STATE_HOME must be read"
+  assert_contains "$OUT" "settings.toml"
+}
+
 passed=0
 failed=0
 for name in $(compgen -A function | grep '^t_' | sort); do
