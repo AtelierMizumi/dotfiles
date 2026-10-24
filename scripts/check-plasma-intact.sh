@@ -18,6 +18,8 @@ WATCHED_FILES=(
   gtk-3.0/settings.ini
   gtk-4.0/settings.ini
   xdg-desktop-portal-kderc
+  xdg-desktop-portal/portals.conf
+  xdg-desktop-portal/kde-portals.conf
 )
 GSETTINGS_SCHEMA=org.gnome.desktop.interface
 GSETTINGS_KEYS=(color-scheme gtk-theme)

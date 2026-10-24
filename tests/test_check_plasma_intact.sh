@@ -176,6 +176,28 @@ t_noctalia_subcommand_propagates_exit_code() {
   assert_contains "$OUT" "settings.toml"
 }
 
+t_portal_overrides_are_watched() {
+  new_env
+  mkdir -p "$XDG_CONFIG_HOME/xdg-desktop-portal"
+  printf '[preferred]\ndefault=kde\n' >"$XDG_CONFIG_HOME/xdg-desktop-portal/portals.conf"
+  printf '[preferred]\ndefault=kde\n' >"$XDG_CONFIG_HOME/xdg-desktop-portal/kde-portals.conf"
+  run snapshot
+  assert_eq "$CODE" 0 "snapshot"
+  printf '[preferred]\ndefault=gnome\n' >"$XDG_CONFIG_HOME/xdg-desktop-portal/kde-portals.conf"
+  run compare
+  assert_eq "$CODE" 1 "kde-portals.conf changed"
+  assert_contains "$OUT" "CHANGED: xdg-desktop-portal/kde-portals.conf"
+
+  new_env
+  mkdir -p "$XDG_CONFIG_HOME/xdg-desktop-portal"
+  printf '[preferred]\ndefault=kde\n' >"$XDG_CONFIG_HOME/xdg-desktop-portal/portals.conf"
+  run snapshot
+  rm "$XDG_CONFIG_HOME/xdg-desktop-portal/portals.conf"
+  run compare
+  assert_eq "$CODE" 1 "portals.conf removed"
+  assert_contains "$OUT" "CHANGED: xdg-desktop-portal/portals.conf"
+}
+
 t_noctalia_subcommand_checks_the_live_config_dir() {
   new_env
   local good="$T/noctalia-good"

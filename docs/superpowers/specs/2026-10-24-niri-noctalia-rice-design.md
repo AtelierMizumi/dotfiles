@@ -48,6 +48,7 @@ Overlay (everything not listed here is an upstream default):
 | 10 | niri gaps / corner radius | gaps 12, `geometry-corner-radius 20`, `clip-to-geometry true` | Noctalia niri page recommends radius 20 | gaps value is our choice |
 | 11 | niri startup | remove `spawn-at-startup "waybar"`; replace `Mod+D` (fuzzel is not installed) with `noctalia msg panel-toggle launcher` | niri Getting Started, Noctalia niri page | verified |
 | 12 | Settings window rule | floating, 1080x920 for `app-id="dev.noctalia.Noctalia"` | Noctalia niri page | verified |
+| 13 | niri portal routing | `~/.config/xdg-desktop-portal/niri-portals.conf`: `default=gnome;gtk;`, `Access` and `Notification` = gtk, no `Secret` line | xdg-desktop-portal `portals.conf` docs: the user directory outranks the system ones and a `<desktop>-portals.conf` outranks the generic `portals.conf` within a directory | verified in the docs. Needed because the user's generic `portals.conf` routes ScreenCast and Screenshot to the Plasma portals (found at install prep). Runtime confirmed by the screen-share check in phase 5 |
 
 ### 3.1 The "Mizu" palette (modification 1)
 
@@ -88,7 +89,8 @@ Invariants, each enforced by `scripts/check-plasma-intact.sh`:
    otherwise enable the GTK or KColorScheme templates.
 2. **`sync_color_scheme` is false** in the merged result, same two files.
 3. Shared files are unchanged between a snapshot and a comparison: `kdeglobals`, `kdedefaults/kdeglobals`,
-   `mimeapps.list`, `gtk-3.0/settings.ini`, `gtk-4.0/settings.ini`, `xdg-desktop-portal-kderc`, plus the values of
+   `mimeapps.list`, `gtk-3.0/settings.ini`, `gtk-4.0/settings.ini`, `xdg-desktop-portal-kderc`,
+   `xdg-desktop-portal/portals.conf`, `xdg-desktop-portal/kde-portals.conf`, plus the values of
    `gsettings get org.gnome.desktop.interface color-scheme` and `gtk-theme`.
 4. Package state: `xdg-desktop-portal-kde`, `plasma-desktop`, `sddm` still installed and `pacman -Qk` reports 0 missing
    files.
@@ -117,7 +119,8 @@ Rules:
   GNOME portal). A read-only `pacman -Sp` dry run on 2026-10-24 for `niri noctalia xdg-desktop-portal-gnome
   xwayland-satellite` listed only additions.
 - The niri package already ships `/usr/share/xdg-desktop-portal/niri-portals.conf`
-  (`default=gnome;gtk;`, `Access` and `Notification` = gtk, `Secret=gnome-keyring`). No portal config is added by this repo.
+  (`default=gnome;gtk;`, `Access` and `Notification` = gtk, `Secret=gnome-keyring`). The user's generic
+  `~/.config/xdg-desktop-portal/portals.conf` outranks it, so this repo adds a user-level `niri-portals.conf` (row 13).
 - **Do not install `gnome-keyring`.** It `Provides: org.freedesktop.secrets`, the same D-Bus name KWallet serves for
   Plasma. It is not pulled in by `xdg-desktop-portal-gnome` (checked with `pacman -Sp`). Consequence: the niri `Secret`
   portal has no backend, so secret storage in niri-session apps may not persist (open question 7).
@@ -153,16 +156,22 @@ Rules:
 
 ## 8. Phases (each ends with a gate)
 
-1. **Baseline:** stow installed; baseline snapshot; niri config copied into repo and backed up. Gate: check script green.
-2. **Packages:** `noctalia`, `xwayland-satellite`, portal choice; user runs `sudo`. Gate: dry-run clean, invariant 4.
-3. **Stow both packages, gate before login:** `niri` and `noctalia` together, because the niri config starts Noctalia
-   and Noctalia with upstream defaults would write the gsettings `color-scheme` (corrected after review; the earlier
-   plan stowed niri alone first). Gate: `check-plasma-intact.sh noctalia` exits 0 and `noctalia config validate` has
-   no `WARN`/`ERROR` lines.
-4. **Log into niri again:** items 1-8 in effect. Gate: visual checks, `compare` and `noctalia` checks green. Stay in
-   the niri session from the phase 1 snapshot to this compare; log into Plasma only afterwards.
-5. **Gaming measurement:** `prime-run`, MangoHud, same scene on Plasma and niri.
-6. **Polish:** per-monitor tweaks, optional Japanese glyph forms.
+The install is driven from a TTY with Plasma logged out (the checker needs plasmashell stopped, and switching VTs
+does not stop it). The runbook in `README.md` is authoritative; this is the shape.
+
+1. **Leave Plasma, baseline:** log out or `loginctl terminate-session`, then snapshot from the TTY. Gate: exit 0.
+2. **Smoke test:** log into niri once with the untouched default config, read niri's startup log for the chosen
+   render node, log out. This separates compositor and hybrid-GPU problems from shell problems. Gate: `compare` exit 0.
+3. **Packages:** `stow`, `noctalia`, `xwayland-satellite`, `xdg-desktop-portal-gnome`; the user runs `sudo` in a second
+   VT. A stale sync database means a full `pacman -Syu` as its own step, never a bare `-Sy`. Gate: `packages` exit 0.
+4. **Stow both packages, gate before login:** `niri` and `noctalia` together, because the niri config starts Noctalia
+   and Noctalia with upstream defaults would write the gsettings `color-scheme`. Gate: `check-plasma-intact.sh
+   noctalia` exits 0 and `noctalia config validate` has no `WARN`/`ERROR` lines.
+5. **Log into niri with the full config:** items 1-13 in effect. Gate: visual checks, screen share, then `compare`
+   and `noctalia` from the TTY, both exit 0.
+6. **Plasma last:** log into Plasma, confirm it behaves normally and file dialogs are still the KDE ones.
+7. **Gaming measurement:** `prime-run`, MangoHud, same scene on Plasma and niri.
+8. **Polish:** per-monitor tweaks, optional Japanese glyph forms.
 
 ## 9. Unverified items and open questions
 
