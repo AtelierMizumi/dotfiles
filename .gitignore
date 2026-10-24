@@ -14,6 +14,7 @@ secrets*
 *.zip
 
 # generated / local state
+.claude/worktrees/
 *.log
 *.bak
 *.swp
