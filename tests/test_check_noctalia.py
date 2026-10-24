@@ -1,5 +1,7 @@
 """Tests for scripts/check_noctalia.py: all theme templates off and sync_color_scheme false, repo config and GUI overrides."""
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -91,6 +93,36 @@ class CheckNoctaliaTest(unittest.TestCase):
         self.write_config(GOOD)
         self.write_settings("[theme\nsync_color_scheme = ")
         self.assert_violation("UNREADABLE TOML")
+
+    def test_include_table_is_unsupported_violation(self):
+        # Noctalia expands [include] files; the checker does not, so it must fail closed instead of saying OK.
+        self.write_config(GOOD + '\n[include]\nfiles = ["extra.toml"]\n')
+        self.assert_violation("UNSUPPORTED INCLUDE")
+
+    def test_include_autoload_false_is_violation(self):
+        self.write_config(GOOD + "\n[include]\nautoload = false\n")
+        self.assert_violation("UNSUPPORTED INCLUDE")
+
+    def test_directory_named_toml_is_ignored(self):
+        # Noctalia skips non-regular files, so a directory called x.toml is not an unreadable config.
+        self.write_config(GOOD)
+        (self.config_dir / "fake.toml").mkdir()
+        self.assertEqual(self.problems(), [])
+
+    def test_main_checks_extra_config_dirs_and_skips_missing_ones(self):
+        self.write_config(GOOD)
+        live = Path(self._tmp.name) / "live"
+        live.mkdir()
+        (live / "extra.toml").write_text("[theme]\nsync_color_scheme = true\n", encoding="utf-8")
+        argv = ["check_noctalia.py", str(self.config_dir), str(self.settings), str(live)]
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            code = check_noctalia.main(argv)
+        self.assertEqual(code, 1)
+        self.assertIn("extra.toml", out.getvalue())
+        missing = Path(self._tmp.name) / "not-stowed-yet"
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = check_noctalia.main(["check_noctalia.py", str(self.config_dir), str(self.settings), str(missing)])
+        self.assertEqual(code, 0)
 
     def test_later_toml_file_wins_alphabetically(self):
         self.write_config(GOOD, name="a.toml")

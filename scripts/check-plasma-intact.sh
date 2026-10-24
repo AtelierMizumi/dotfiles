@@ -122,10 +122,13 @@ cmd_packages() {
 }
 
 cmd_noctalia() {
-  local script_dir repo_config
+  local script_dir repo_config live_config settings
   script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
   repo_config=${NOCTALIA_REPO_CONFIG_DIR:-$script_dir/../noctalia/.config/noctalia}
-  python3 -I "$script_dir/check_noctalia.py" "$repo_config" "$STATE_HOME/noctalia/settings.toml"
+  # Noctalia prefers its own NOCTALIA_*_HOME variables over XDG, and loads the live config dir, not the repo.
+  live_config="${NOCTALIA_CONFIG_HOME:-$CONFIG_HOME}/noctalia"
+  settings="${NOCTALIA_STATE_HOME:-$STATE_HOME}/noctalia/settings.toml"
+  python3 -I -B "$script_dir/check_noctalia.py" "$repo_config" "$settings" "$live_config"
 }
 
 command_name=${1:-}

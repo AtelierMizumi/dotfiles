@@ -10,6 +10,11 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-24-niri-noctalia-rice-design.md`
 
+> **Erratum (after the whole-branch review):** Task 7 phases 3-4 and the `noctalia config validate` gate below were
+> corrected. Stow `niri` and `noctalia` together before the next niri login, stay in the niri session until the final
+> compare, and run `noctalia config validate` with no argument (pass = exit 0 and no `WARN`/`ERROR` line). `README.md`
+> and spec sections 7-8 are authoritative.
+
 ## Global Constraints
 
 - niri 26.04 and `noctalia 5.3.0-1` (both from `extra`). No `/etc` edits. The agent never runs `sudo`; the user runs `! sudo pacman -S ...` interactively and aborts if the prompt removes or replaces `plasma-*`, `kde-*` or `xdg-desktop-portal-kde`.

@@ -15,6 +15,8 @@ secrets*
 
 # generated / local state
 .claude/worktrees/
+__pycache__/
+*.pyc
 *.log
 *.bak
 *.swp

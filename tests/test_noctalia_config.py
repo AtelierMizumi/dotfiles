@@ -48,9 +48,12 @@ class NoctaliaConfigTest(unittest.TestCase):
         self.assertIs(self.config.get("desktop_widgets", {}).get("enabled", False), False)
 
     def test_plasma_checker_accepts_the_repo_config(self):
-        with tempfile.TemporaryDirectory() as state_home:
-            env = {key: value for key, value in os.environ.items() if key != "NOCTALIA_REPO_CONFIG_DIR"}
-            env["XDG_STATE_HOME"] = state_home
+        # Isolate both XDG dirs: the checker also reads the live ~/.config/noctalia, which depends on the machine.
+        with tempfile.TemporaryDirectory() as home:
+            hidden = {"NOCTALIA_REPO_CONFIG_DIR", "NOCTALIA_CONFIG_HOME", "NOCTALIA_STATE_HOME"}
+            env = {key: value for key, value in os.environ.items() if key not in hidden}
+            env["XDG_STATE_HOME"] = f"{home}/state"
+            env["XDG_CONFIG_HOME"] = f"{home}/config"
             result = subprocess.run(
                 [str(CHECKER), "noctalia"], env=env, capture_output=True, text=True, check=False
             )

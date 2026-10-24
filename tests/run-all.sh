@@ -50,7 +50,7 @@ done
 # Python discovery exits 5 when no test file exists yet, so only run it once some exist.
 if compgen -G "tests/test_*.py" >/dev/null; then
   echo "== python unittest"
-  output=$(python3 -I -m unittest discover -s tests -p 'test_*.py' -v 2>&1)
+  output=$(python3 -I -B -m unittest discover -s tests -p 'test_*.py' -v 2>&1)
   code=$?
   echo "$output"
   py_passed=$(grep -c ' \.\.\. ok$' <<<"$output")

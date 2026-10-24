@@ -116,6 +116,34 @@ t_xdg_activation_honored() {
   grep -qE '^[[:space:]]*honor-xdg-activation-with-invalid-serial' <<<"$active" || fail "honor-xdg-activation-with-invalid-serial missing"
 }
 
+t_lc_time_comment_is_accurate() {
+  # Apps started from Noctalia's launcher inherit its environment, so the comment must not claim isolation.
+  grep -q 'apps it launches' "$CONFIG" || fail "the LC_TIME comment does not say apps launched by Noctalia inherit it"
+  ! grep -q 'any other app' "$CONFIG" || fail "the LC_TIME comment still claims no other app is affected"
+}
+
+t_lock_bind_uses_noctalia() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  grep -qE '^[[:space:]]*Super\+Alt\+L[[:space:]].*spawn "noctalia" "msg" "session" "lock"' <<<"$active" || fail "Super+Alt+L does not lock through Noctalia"
+  ! grep -qi 'swaylock' "$CONFIG" || fail "swaylock (not installed) is still referenced"
+}
+
+t_hardware_keys_use_noctalia_ipc() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  local pair key action
+  for pair in \
+    'XF86AudioRaiseVolume|volume-up' 'XF86AudioLowerVolume|volume-down' 'XF86AudioMute|volume-mute' \
+    'XF86MonBrightnessUp|brightness-up' 'XF86MonBrightnessDown|brightness-down' \
+    'XF86AudioPlay|media toggle' 'XF86AudioNext|media next' 'XF86AudioPrev|media previous' 'XF86AudioStop|media stop'; do
+    key=${pair%%|*}
+    action=${pair#*|}
+    grep -qE "^[[:space:]]*${key}[[:space:]].*noctalia msg ${action}" <<<"$active" || fail "$key does not run 'noctalia msg $action'"
+  done
+  ! grep -qE 'brightnessctl|playerctl' "$CONFIG" || fail "brightnessctl/playerctl (not installed) are still referenced"
+}
+
 t_no_env_leak() {
   local active count
   [[ -f "$CONFIG" ]] || fail "config missing"

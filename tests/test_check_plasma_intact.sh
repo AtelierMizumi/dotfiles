@@ -176,6 +176,35 @@ t_noctalia_subcommand_propagates_exit_code() {
   assert_contains "$OUT" "settings.toml"
 }
 
+t_noctalia_subcommand_checks_the_live_config_dir() {
+  new_env
+  local good="$T/noctalia-good"
+  mkdir -p "$good" "$XDG_CONFIG_HOME/noctalia"
+  printf '[theme]\nsync_color_scheme = false\n\n[theme.templates]\nenable_builtin_templates = false\nenable_community_templates = false\n' >"$good/config.toml"
+  printf '[theme]\nsync_color_scheme = true\n' >"$XDG_CONFIG_HOME/noctalia/extra.toml"
+  export NOCTALIA_REPO_CONFIG_DIR="$good"
+  run noctalia
+  assert_eq "$CODE" 1 "an extra file in the live config dir must be caught"
+  assert_contains "$OUT" "extra.toml"
+}
+
+t_noctalia_subcommand_honors_noctalia_home_overrides() {
+  new_env
+  local good="$T/noctalia-good"
+  mkdir -p "$good" "$T/nc/noctalia" "$T/ns/noctalia"
+  printf '[theme]\nsync_color_scheme = false\n\n[theme.templates]\nenable_builtin_templates = false\nenable_community_templates = false\n' >"$good/config.toml"
+  cp "$good/config.toml" "$T/nc/noctalia/config.toml"
+  export NOCTALIA_REPO_CONFIG_DIR="$good"
+  export NOCTALIA_CONFIG_HOME="$T/nc"
+  export NOCTALIA_STATE_HOME="$T/ns"
+  run noctalia
+  assert_eq "$CODE" 0 "clean overrides, output: $OUT $ERR"
+  printf '[theme]\nsync_color_scheme = true\n' >"$T/ns/noctalia/settings.toml"
+  run noctalia
+  assert_eq "$CODE" 1 "settings.toml under NOCTALIA_STATE_HOME must be read"
+  assert_contains "$OUT" "$T/ns/noctalia/settings.toml"
+}
+
 passed=0
 failed=0
 for name in $(compgen -A function | grep '^t_' | sort); do

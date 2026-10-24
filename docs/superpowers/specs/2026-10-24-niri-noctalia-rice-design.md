@@ -42,7 +42,7 @@ Overlay (everything not listed here is an upstream default):
 | 4 | `[theme.templates] enable_builtin_templates`, `enable_community_templates` | `false`, `false` | `example.toml`, templates docs | verified keys. Invariant: **all templates off** (the GTK/Qt, KColorScheme and niri templates write `gtk-*`, `kdeglobals`, `niri/config.kdl`) |
 | 5 | `[shell] polkit_agent` | `true` | `example.toml` (default `false`) | key verified. Nothing else starts a polkit agent in a niri session |
 | 6 | `[widget.clock] format` | `"{:%-m}月{:%-d}日 {:%a} {:%H:%M}"` | clock + date-format-tokens docs | strftime tokens verified; non-ASCII literals "copied through" per docs but **unverified** |
-| 7 | Process locale | `LC_TIME=ja_JP.UTF-8` on the `noctalia` process only | date-format docs (names follow `LC_TIME`); `locale -a` shows `ja_JP.utf8` | verified on this machine. Scoped via niri `spawn-at-startup "env" "LC_TIME=ja_JP.UTF-8" "noctalia"` so Plasma is untouched |
+| 7 | Process locale | `LC_TIME=ja_JP.UTF-8` on the `noctalia` process | date-format docs (names follow `LC_TIME`); `locale -a` shows `ja_JP.utf8` | verified on this machine. Set via niri `spawn-at-startup "env" "LC_TIME=ja_JP.UTF-8" "noctalia"`, so Plasma is untouched. Apps started from Noctalia's launcher inherit it (found in review) |
 | 8 | Per-monitor bar overrides | none at first | bar docs | If needed later, match by **connector name** (`eDP-1`, `HDMI-A-1`), never by description substring |
 | 9 | niri focus ring | 2 px, hex hardcoded `#E2A63B` in `config.kdl` | niri docs | hardcoded on purpose, instead of enabling the niri template |
 | 10 | niri gaps / corner radius | gaps 12, `geometry-corner-radius 20`, `clip-to-geometry true` | Noctalia niri page recommends radius 20 | gaps value is our choice |
@@ -142,9 +142,12 @@ Rules:
   missing snapshot exits 2. Plain bash runner; `shellcheck` is installed, `bats` is not.
 - **Test-first now, because niri is already installed:** `niri validate -c <file>` (verified: prints `config is valid`)
   for the repo `config.kdl`, and a Python check of `Mizu.json` (16 roles, hex format, the contrast ratios in 3.1).
-- **After the package is installed, not before:** `noctalia config validate <dir>`. It exits 0 on warnings such as
-  unknown keys, so the test must fail on **any output**, not on exit code alone. This is also where
-  `source = "custom"` gets settled. No config test exists or is implied before installation.
+- **After the package is installed, not before:** `noctalia config validate` with **no argument**, which also reads
+  `~/.local/state/noctalia/settings.toml` (a directory argument skips it). On success it always prints
+  `✓ Config is valid`, and it exits 0 even with warnings such as unknown keys, which it prints as `WARN` lines. The
+  gate is therefore exit 0 and no output line starting with `WARN` or `ERROR` (corrected after review; the earlier
+  "no output at all" could never pass). This is also where `source = "custom"` gets settled. No config test exists or
+  is implied before installation.
 - **Manual, in the real session:** clock renders `10月24日 土 14:30`; both outputs show a bar; the Palette Inspector
   (Settings → Appearance → Theme) shows Mizu active.
 
@@ -152,9 +155,12 @@ Rules:
 
 1. **Baseline:** stow installed; baseline snapshot; niri config copied into repo and backed up. Gate: check script green.
 2. **Packages:** `noctalia`, `xwayland-satellite`, portal choice; user runs `sudo`. Gate: dry-run clean, invariant 4.
-3. **Minimal niri session:** edited `config.kdl` (items 9-12), Noctalia not yet started. Gate: login works, Plasma
-   session still works.
-4. **Noctalia on:** items 1-8, run `noctalia config validate`. Gate: no output, check script green.
+3. **Stow both packages, gate before login:** `niri` and `noctalia` together, because the niri config starts Noctalia
+   and Noctalia with upstream defaults would write the gsettings `color-scheme` (corrected after review; the earlier
+   plan stowed niri alone first). Gate: `check-plasma-intact.sh noctalia` exits 0 and `noctalia config validate` has
+   no `WARN`/`ERROR` lines.
+4. **Log into niri again:** items 1-8 in effect. Gate: visual checks, `compare` and `noctalia` checks green. Stay in
+   the niri session from the phase 1 snapshot to this compare; log into Plasma only afterwards.
 5. **Gaming measurement:** `prime-run`, MangoHud, same scene on Plasma and niri.
 6. **Polish:** per-monitor tweaks, optional Japanese glyph forms.
 

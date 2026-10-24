@@ -1,6 +1,8 @@
 """Check that a Noctalia config keeps every theme template off and sync_color_scheme false.
 
-Usage: check_noctalia.py <config_dir> <settings_toml>
+Usage: check_noctalia.py <config_dir> <settings_toml> [<extra_config_dir>...]
+
+The extra directories are the ones Noctalia really loads (the live config directory); they are skipped when missing.
 
 Noctalia merges every *.toml in its config directory (sorted by name), then applies the GUI override file
 settings.toml on top, so a toggle in the settings UI wins over the repo config. This script applies the same
@@ -9,7 +11,8 @@ merge and reports anything that would let Noctalia write outside its own directo
 - the built-in or community templates enabled, or any template id listed (the GTK/Qt/KColorScheme templates write
   gtk-*, kdeglobals and the niri config);
 - a user template that is not explicitly disabled;
-- sync_color_scheme not false (upstream default is true; it runs a user-wide gsettings color-scheme write).
+- sync_color_scheme not false (upstream default is true; it runs a user-wide gsettings color-scheme write);
+- an [include] table in any layer, which this checker cannot expand (UNSUPPORTED INCLUDE).
 
 Exit codes: 0 no violation, 1 violation found, 2 usage error.
 """
@@ -75,14 +78,21 @@ def check(config_dir: Path, settings_toml: Path) -> list[str]:
     origins: dict[str, str] = {}
     problems: list[str] = []
 
-    layers = sorted(config_dir.glob("*.toml"))
-    if settings_toml.exists():
+    # Noctalia only reads regular files, so a directory called x.toml is not a config layer.
+    layers = sorted(path for path in config_dir.glob("*.toml") if path.is_file())
+    if settings_toml.is_file():
         layers.append(settings_toml)
     for layer in layers:
         try:
-            _merge(merged, _load(layer), origins, str(layer))
+            data = _load(layer)
         except _Unreadable:
             problems.append(f"UNREADABLE TOML: {layer}")
+            continue
+        # Noctalia expands [include] files and `autoload = false` can drop other config files. This checker
+        # does not model either, so it fails closed instead of reporting a config it cannot fully see.
+        if "include" in data:
+            problems.append(f"UNSUPPORTED INCLUDE: {layer}")
+        _merge(merged, data, origins, str(layer))
 
     if _get(merged, "theme", "sync_color_scheme") is not False:
         key = "theme.sync_color_scheme"
@@ -111,10 +121,17 @@ def check(config_dir: Path, settings_toml: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3:
-        print("usage: check_noctalia.py <config_dir> <settings_toml>", file=sys.stderr)
+    if len(argv) < 3:
+        print("usage: check_noctalia.py <config_dir> <settings_toml> [<extra_config_dir>...]", file=sys.stderr)
         return 2
-    problems = check(Path(argv[1]), Path(argv[2]))
+    settings = Path(argv[2])
+    problems = check(Path(argv[1]), settings)
+    # Extra directories (the live ~/.config/noctalia) are checked too, but only when they exist: a directory that
+    # is not stowed yet is not loaded by Noctalia either.
+    for extra in argv[3:]:
+        if Path(extra).is_dir():
+            found = [line for line in check(Path(extra), settings) if line not in problems]
+            problems.extend(found)
     for line in problems:
         print(line)
     if problems:
