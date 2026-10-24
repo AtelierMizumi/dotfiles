@@ -1,0 +1,27 @@
+# Noctalia overlay on top of the upstream defaults (example.toml). Only the keys below differ.
+# Spec: docs/superpowers/specs/2026-10-24-niri-noctalia-rice-design.md
+
+[theme]
+mode = "dark"
+# Unverified: the palette docs say "custom", example.toml lists builtin | wallpaper | community.
+# Settled by `noctalia config validate` after install (plan Task 7).
+# Fallback if rejected: source = "builtin" with builtin = "Tokyo-Night".
+source = "custom"
+custom_palette = "Mizu"
+# Upstream default is true and runs `gsettings set org.gnome.desktop.interface color-scheme ...`,
+# a user-wide write that also reaches GTK apps under Plasma.
+sync_color_scheme = false
+
+[theme.templates]
+# All templates stay off: the GTK/Qt/KColorScheme templates write gtk-* and kdeglobals,
+# and the niri template edits niri/config.kdl.
+enable_builtin_templates = false
+enable_community_templates = false
+
+[shell]
+# Nothing else starts a polkit agent in a niri session.
+polkit_agent = true
+
+[widget.clock]
+# The weekday name needs LC_TIME=ja_JP.UTF-8 on the noctalia process (set in the niri config).
+format = "{:%-m}月{:%-d}日 {:%a} {:%H:%M}"
