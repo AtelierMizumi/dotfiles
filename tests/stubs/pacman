@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Fake pacman for tests. STUB_PACMAN_MISSING: space-separated packages that are not installed.
+# STUB_PACMAN_BROKEN: space-separated packages that report missing files in `-Qk`.
+set -u
+
+op="${1:-}"
+pkg="${2:-}"
+
+has() {
+  local word
+  for word in $1; do
+    [[ "$word" == "$2" ]] && return 0
+  done
+  return 1
+}
+
+case "$op" in
+  -Q)
+    if has "${STUB_PACMAN_MISSING:-}" "$pkg"; then
+      echo "error: package '$pkg' was not found" >&2
+      exit 1
+    fi
+    echo "$pkg 1.0-1"
+    ;;
+  -Qk)
+    if has "${STUB_PACMAN_BROKEN:-}" "$pkg"; then
+      echo "$pkg: 100 total files, 3 missing files"
+    else
+      echo "$pkg: 100 total files, 0 missing files"
+    fi
+    ;;
+  *)
+    echo "stub pacman: unsupported args: $*" >&2
+    exit 64
+    ;;
+esac

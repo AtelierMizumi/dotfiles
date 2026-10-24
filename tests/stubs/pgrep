@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Fake pgrep for tests. STUB_PGREP_MATCH=1 reports a running process, anything else reports none.
+if [[ "${STUB_PGREP_MATCH:-0}" == "1" ]]; then
+  echo 1234
+  exit 0
+fi
+exit 1

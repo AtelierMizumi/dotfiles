@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Fake gsettings for tests. `gsettings get <schema> <key>` prints the content of $STUB_GSETTINGS_DIR/<key>
+# (default 'default'). STUB_GSETTINGS_FAIL=1 makes it fail like a missing D-Bus session.
+set -u
+
+if [[ "${STUB_GSETTINGS_FAIL:-0}" == "1" ]]; then
+  echo "(process:1): dconf-CRITICAL **: unable to create file" >&2
+  exit 1
+fi
+
+if [[ "${1:-}" != "get" || $# -ne 3 ]]; then
+  echo "stub gsettings: unsupported args: $*" >&2
+  exit 64
+fi
+
+file="${STUB_GSETTINGS_DIR:?}/$3"
+if [[ -f "$file" ]]; then
+  cat "$file"
+else
+  echo "'default'"
+fi
