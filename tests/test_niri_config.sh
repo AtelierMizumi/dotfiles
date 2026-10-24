@@ -100,7 +100,7 @@ t_launcher_control_center_settings_binds() {
   grep -qE '^[[:space:]]*Mod\+Space[[:space:]].*spawn-sh "noctalia msg panel-toggle launcher"' <<<"$active" || fail "Mod+Space launcher bind missing"
   grep -qE '^[[:space:]]*Mod\+D[[:space:]].*spawn-sh "noctalia msg panel-toggle launcher"' <<<"$active" || fail "Mod+D launcher bind missing"
   grep -qE '^[[:space:]]*Mod\+S[[:space:]].*spawn-sh "noctalia msg panel-toggle control-center"' <<<"$active" || fail "Mod+S control center bind missing"
-  grep -qE '^[[:space:]]*Mod\+Shift\+Comma[[:space:]].*spawn-sh "noctalia msg settings-toggle"' <<<"$active" || fail "Mod+Shift+Comma settings bind missing"
+  grep -qE '^[[:space:]]*Mod\+Alt\+S[[:space:]].*spawn-sh "noctalia msg settings-toggle"' <<<"$active" || fail "Mod+Alt+S settings bind missing"
 }
 
 t_default_column_binds_kept() {
@@ -142,6 +142,108 @@ t_hardware_keys_use_noctalia_ipc() {
     grep -qE "^[[:space:]]*${key}[[:space:]].*noctalia msg ${action}" <<<"$active" || fail "$key does not run 'noctalia msg $action'"
   done
   ! grep -qE 'brightnessctl|playerctl' "$CONFIG" || fail "brightnessctl/playerctl (not installed) are still referenced"
+}
+
+# Succeeds when an active bind with this exact key combo contains the given text.
+has_bind() {
+  active_lines "$CONFIG" | awk -v combo="$1" -v text="$2" '$1 == combo && index($0, text) > 0 { found = 1 } END { exit !found }'
+}
+
+# One hand on a Sofle or a laptop: every bind is at most three keys (Super, one more modifier, one key).
+t_no_bind_needs_more_than_three_keys() {
+  local too_long
+  [[ -f "$CONFIG" ]] || fail "config missing"
+  too_long=$(active_lines "$CONFIG" | awk '/^binds[[:space:]]*\{/ { inb = 1; next } inb && /^\}/ { inb = 0 } inb && NF > 0 { n = split($1, p, "+"); if (n > 3) print $1 }')
+  [[ -z "$too_long" ]] || fail "binds with more than three keys: $(tr '\n' ' ' <<<"$too_long")"
+}
+
+t_app_binds() {
+  local pair combo text
+  for pair in 'Mod+T|spawn "ghostty"' 'Mod+Return|spawn "ghostty"' 'Mod+B|spawn "zen-browser"' 'Mod+E|spawn "dolphin"' 'Mod+C|spawn "code"'; do
+    combo=${pair%%|*}
+    text=${pair#*|}
+    has_bind "$combo" "$text" || fail "$combo does not run $text"
+  done
+}
+
+t_noctalia_binds() {
+  local pair combo text
+  for pair in 'Mod+Shift+V|noctalia msg panel-toggle clipboard' 'Mod+N|noctalia msg notification-dnd-toggle' \
+    'Mod+Escape|"noctalia" "msg" "session" "lock"' 'Super+Alt+L|"noctalia" "msg" "session" "lock"'; do
+    combo=${pair%%|*}
+    text=${pair#*|}
+    has_bind "$combo" "$text" || fail "$combo does not run $text"
+  done
+}
+
+t_screenshot_and_brightness_binds() {
+  has_bind 'Mod+Shift+S' 'screenshot;' || fail "Mod+Shift+S does not take a screenshot"
+  has_bind 'Mod+Alt+Minus' 'noctalia msg brightness-down' || fail "Mod+Alt+Minus does not lower the brightness"
+  has_bind 'Mod+Alt+Equal' 'noctalia msg brightness-up' || fail "Mod+Alt+Equal does not raise the brightness"
+}
+
+t_movement_binds_use_letters_and_one_modifier() {
+  local pair combo text
+  for pair in 'Mod+H|focus-column-left' 'Mod+L|focus-column-right' 'Mod+J|focus-window-down' 'Mod+K|focus-window-up' \
+    'Mod+Shift+H|move-column-left' 'Mod+Shift+L|move-column-right' 'Mod+Shift+J|move-window-down' 'Mod+Shift+K|move-window-up' \
+    'Mod+U|focus-workspace-down' 'Mod+I|focus-workspace-up' \
+    'Mod+Tab|focus-monitor-next' 'Mod+Shift+Tab|move-column-to-monitor-next' \
+    'Mod+Alt+Left|move-column-to-monitor-left' 'Mod+Alt+Right|move-column-to-monitor-right' \
+    'Mod+Alt+Up|move-column-to-monitor-up' 'Mod+Alt+Down|move-column-to-monitor-down'; do
+    combo=${pair%%|*}
+    text=${pair#*|}
+    has_bind "$combo" "$text" || fail "$combo does not run $text"
+  done
+}
+
+t_workspace_number_binds() {
+  local n
+  for n in 1 2 3 4 5 6 7 8 9; do
+    has_bind "Mod+$n" "focus-workspace $n;" || fail "Mod+$n does not focus workspace $n"
+    has_bind "Mod+Shift+$n" "move-column-to-workspace $n;" || fail "Mod+Shift+$n does not move the column to workspace $n"
+  done
+}
+
+t_layout_binds_moved_to_free_keys() {
+  has_bind 'Mod+Z' 'center-column;' || fail "Mod+Z does not center the column"
+  has_bind 'Mod+Alt+R' 'switch-preset-window-height;' || fail "Mod+Alt+R does not switch the window height preset"
+  has_bind 'Mod+Alt+V' 'switch-focus-between-floating-and-tiling;' || fail "Mod+Alt+V does not switch floating/tiling focus"
+  has_bind 'Mod+Alt+Escape' 'toggle-keyboard-shortcuts-inhibit;' || fail "Mod+Alt+Escape does not toggle the shortcut inhibitor"
+  has_bind 'Mod+V' 'toggle-window-floating;' || fail "Mod+V no longer toggles floating"
+  has_bind 'Mod+F' 'maximize-column;' || fail "Mod+F no longer maximizes the column"
+}
+
+t_orca_bind_removed() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  ! grep -q 'orca' <<<"$active" || fail "the Orca screen reader bind is still active"
+}
+
+t_outputs_mirror_the_plasma_layout() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  awk '/^output "eDP-1"[[:space:]]*\{/ { inb = 1 } inb && /scale 1\.25/ { s = 1 } inb && /position x=0 y=0/ { p = 1 } inb && /^\}/ { exit } END { exit !(s && p) }' <<<"$active" ||
+    fail "output eDP-1 is not scale 1.25 at x=0 y=0"
+  awk '/^output "HDMI-A-1"[[:space:]]*\{/ { inb = 1 } inb && /scale 1[[:space:]]*$/ { s = 1 } inb && /position x=1536 y=0/ { p = 1 } inb && /^\}/ { exit } END { exit !(s && p) }' <<<"$active" ||
+    fail "output HDMI-A-1 is not scale 1 at x=1536 y=0"
+  ! grep -qE '^[[:space:]]*mode ' <<<"$active" || fail "a fixed output mode is set; the external monitors change with the place"
+}
+
+t_cursor_matches_plasma() {
+  local block
+  block=$(active_lines "$CONFIG" | awk '/^cursor[[:space:]]*\{/ { inb = 1 } inb { print } inb && /^\}/ { exit }')
+  grep -qF 'xcursor-theme "breeze_cursors"' <<<"$block" || fail "cursor theme is not breeze_cursors"
+  grep -qE 'xcursor-size 36' <<<"$block" || fail "cursor size is not 36"
+}
+
+t_windows_have_no_client_decorations() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  grep -qxF 'prefer-no-csd' <<<"$active" || fail "prefer-no-csd is not enabled"
+}
+
+t_editors_open_full_width() {
+  window_rule_has 'app-id=r#"^([Cc]ode|[Aa]ntigravity)$"#' 'default-column-width { proportion 1.0; }' || fail "no window-rule opening VS Code and Antigravity full width"
 }
 
 t_no_env_leak() {

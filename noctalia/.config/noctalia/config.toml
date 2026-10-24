@@ -25,3 +25,23 @@ polkit_agent = true
 [widget.clock]
 # The weekday name needs LC_TIME=ja_JP.UTF-8 on the noctalia process (set in the niri config).
 format = "{:%-m}月{:%-d}日 {:%a} {:%H:%M}"
+
+[idle]
+# Desk setup with two fixed monitors: long timeouts, and no automatic suspend that would cut builds or downloads
+# short. The screens turn off after 30 minutes and the session locks 15 minutes later, so waking the screens within
+# that window resumes without a password. Idle inhibitors (video, calls) are respected.
+behavior_order = ["screen-off", "lock"]
+pre_action_fade_seconds = 3.0
+
+[idle.behavior.screen-off]
+action = "screen_off"
+timeout = 1800
+
+[idle.behavior.lock]
+action = "lock"
+timeout = 2700
+
+[wallpaper.default]
+# ColdRipple from Plasma's wallpapers: a pier in fog. The wallpaper widget in the bar picks another one; that choice
+# is saved in ~/.local/state/noctalia/settings.toml and wins over this default.
+path = "/usr/share/wallpapers/ColdRipple/contents/images/2560x1440.jpg"

@@ -106,6 +106,25 @@ input {
     position x=1280 y=0
 }
 
+// The layout of the desk setup, copied from the Plasma session: the laptop panel at scale 1.25 (1536 logical
+// pixels wide) with the external monitor to its right. No `mode` on purpose: the external monitor depends on where
+// the laptop is used, and without a mode niri picks the highest refresh rate for the monitor's own resolution.
+output "eDP-1" {
+    scale 1.25
+    position x=0 y=0
+}
+
+output "HDMI-A-1" {
+    scale 1
+    position x=1536 y=0
+}
+
+// Same cursor as Plasma (kcminputrc: size 36, breeze_cursors).
+cursor {
+    xcursor-theme "breeze_cursors"
+    xcursor-size 36
+}
+
 // Settings that influence how windows are positioned and sized.
 // Find more information on the wiki:
 // https://niri-wm.github.io/niri/Configuration:-Layout
@@ -285,7 +304,8 @@ hotkey-overlay {
 // Additionally, clients will be informed that they are tiled, removing some client-side rounded corners.
 // This option will also fix border/focus ring drawing behind some semitransparent windows.
 // After enabling or disabling this, you need to restart the apps for this to take effect.
-// prefer-no-csd
+// No client-side title bars: the 20px rounded corners and the focus ring look right on every window.
+prefer-no-csd
 
 // You can change the path where screenshots are saved.
 // A ~ at the front will be expanded to the home directory.
@@ -355,6 +375,12 @@ window-rule {
     default-window-height { fixed 920; }
 }
 
+// Editors open full width: half of the 1536 logical pixels of the laptop panel is too narrow for code.
+window-rule {
+    match app-id=r#"^([Cc]ode|[Aa]ntigravity)$"#
+    default-column-width { proportion 1.0; }
+}
+
 binds {
     // Keys consist of modifiers separated by + signs, followed by an XKB key name
     // in the end. To find an XKB name for a particular key, you may use a program
@@ -370,19 +396,35 @@ binds {
     // shows a list of important hotkeys.
     Mod+Shift+Slash { show-hotkey-overlay; }
 
-    // Suggested binds for running programs: terminal, app launcher, screen locker.
-    Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
+    // Design rules: every bind is Super plus at most two more keys, made of letters, digits and the thumb keys of
+    // the Sofle base layer (no F-keys, Print, Home/End, Page keys or arrows needed; the arrow variants are extras
+    // for laptop keyboards). Super is the left thumb key on the Sofle, so Super+Space, Super+Minus and
+    // Super+Equal are one-hand chords there. See docs/USAGE.md.
+
+    // Apps.
+    Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
+    Mod+Return hotkey-overlay-title=null { spawn "ghostty"; }
+    Mod+B hotkey-overlay-title="Open the Browser: zen" { spawn "zen-browser"; }
+    Mod+E hotkey-overlay-title="Open the File Manager: dolphin" { spawn "dolphin"; }
+    Mod+C hotkey-overlay-title="Open the Editor: VS Code" { spawn "code"; }
+
+    // Noctalia shell.
     Mod+D hotkey-overlay-title="Run an Application: Noctalia launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
     Mod+Space hotkey-overlay-title=null { spawn-sh "noctalia msg panel-toggle launcher"; }
     Mod+S hotkey-overlay-title="Control Center: Noctalia" { spawn-sh "noctalia msg panel-toggle control-center"; }
-    // Noctalia's docs use Mod+Comma here, but niri's Mod+Comma is consume-window-into-column.
-    Mod+Shift+Comma hotkey-overlay-title="Settings: Noctalia" { spawn-sh "noctalia msg settings-toggle"; }
-    Super+Alt+L hotkey-overlay-title="Lock the Screen: Noctalia" { spawn "noctalia" "msg" "session" "lock"; }
+    // Noctalia's docs use Mod+Comma for settings, but niri's Mod+Comma is consume-window-into-column.
+    Mod+Alt+S hotkey-overlay-title="Settings: Noctalia" { spawn-sh "noctalia msg settings-toggle"; }
+    Mod+Shift+V hotkey-overlay-title="Clipboard History: Noctalia" { spawn-sh "noctalia msg panel-toggle clipboard"; }
+    Mod+N hotkey-overlay-title="Do Not Disturb: toggle" { spawn-sh "noctalia msg notification-dnd-toggle"; }
+    Mod+Escape hotkey-overlay-title="Lock the Screen: Noctalia" { spawn "noctalia" "msg" "session" "lock"; }
+    Super+Alt+L hotkey-overlay-title=null { spawn "noctalia" "msg" "session" "lock"; }
 
-    // Use spawn-sh to run a shell command. Do this if you need pipes, multiple commands, etc.
-    // Note: the entire command goes as a single argument. It's passed verbatim to `sh -c`.
-    // For example, this is a standard bind to toggle the screen reader (orca).
-    Super+Alt+S allow-when-locked=true hotkey-overlay-title=null { spawn-sh "pkill orca || exec orca"; }
+    // Screenshot with an interactive selection (Print does the same on a laptop keyboard).
+    Mod+Shift+S hotkey-overlay-title="Screenshot: select an area" { screenshot; }
+
+    // Brightness for keyboards without brightness keys (the Sofle): the thumb keys Minus and Equal.
+    Mod+Alt+Minus allow-when-locked=true hotkey-overlay-title="Brightness down" { spawn-sh "noctalia msg brightness-down"; }
+    Mod+Alt+Equal allow-when-locked=true hotkey-overlay-title="Brightness up" { spawn-sh "noctalia msg brightness-up"; }
 
     // Example volume keys mappings for PipeWire & WirePlumber.
     // The allow-when-locked=true property makes them work even when the session is locked.
@@ -431,6 +473,12 @@ binds {
     Mod+Ctrl+K     { move-window-up; }
     Mod+Ctrl+L     { move-column-right; }
 
+    // The same moves with Shift instead of Ctrl: on the Sofle, Ctrl is a hold on Space while Shift is a plain key.
+    Mod+Shift+H     { move-column-left; }
+    Mod+Shift+J     { move-window-down; }
+    Mod+Shift+K     { move-window-up; }
+    Mod+Shift+L     { move-column-right; }
+
     // Alternative commands that move across workspaces when reaching
     // the first or last window in a column.
     // Mod+J     { focus-window-or-workspace-down; }
@@ -443,23 +491,18 @@ binds {
     Mod+Ctrl+Home { move-column-to-first; }
     Mod+Ctrl+End  { move-column-to-last; }
 
+    // Between monitors: Super+Tab cycles the focus (with two monitors, back and forth) and Super+Shift+Tab sends the
+    // column along. Directional versions, for three or more monitors, use the arrow keys.
+    Mod+Tab hotkey-overlay-title="Focus the other monitor" { focus-monitor-next; }
+    Mod+Shift+Tab hotkey-overlay-title="Send the column to the other monitor" { move-column-to-monitor-next; }
     Mod+Shift+Left  { focus-monitor-left; }
     Mod+Shift+Down  { focus-monitor-down; }
     Mod+Shift+Up    { focus-monitor-up; }
     Mod+Shift+Right { focus-monitor-right; }
-    Mod+Shift+H     { focus-monitor-left; }
-    Mod+Shift+J     { focus-monitor-down; }
-    Mod+Shift+K     { focus-monitor-up; }
-    Mod+Shift+L     { focus-monitor-right; }
-
-    Mod+Shift+Ctrl+Left  { move-column-to-monitor-left; }
-    Mod+Shift+Ctrl+Down  { move-column-to-monitor-down; }
-    Mod+Shift+Ctrl+Up    { move-column-to-monitor-up; }
-    Mod+Shift+Ctrl+Right { move-column-to-monitor-right; }
-    Mod+Shift+Ctrl+H     { move-column-to-monitor-left; }
-    Mod+Shift+Ctrl+J     { move-column-to-monitor-down; }
-    Mod+Shift+Ctrl+K     { move-column-to-monitor-up; }
-    Mod+Shift+Ctrl+L     { move-column-to-monitor-right; }
+    Mod+Alt+Left    { move-column-to-monitor-left; }
+    Mod+Alt+Down    { move-column-to-monitor-down; }
+    Mod+Alt+Up      { move-column-to-monitor-up; }
+    Mod+Alt+Right   { move-column-to-monitor-right; }
 
     // Alternatively, there are commands to move just a single window:
     // Mod+Shift+Ctrl+Left  { move-window-to-monitor-left; }
@@ -507,8 +550,6 @@ binds {
     // horizontal scrolling; these binds replicate that.
     Mod+Shift+WheelScrollDown      { focus-column-right; }
     Mod+Shift+WheelScrollUp        { focus-column-left; }
-    Mod+Ctrl+Shift+WheelScrollDown { move-column-right; }
-    Mod+Ctrl+Shift+WheelScrollUp   { move-column-left; }
 
     // Similarly, you can bind touchpad scroll "ticks".
     // Touchpad scrolling is continuous, so for these binds it is split into
@@ -545,6 +586,16 @@ binds {
     Mod+Ctrl+7 { move-column-to-workspace 7; }
     Mod+Ctrl+8 { move-column-to-workspace 8; }
     Mod+Ctrl+9 { move-column-to-workspace 9; }
+    // The same with Shift (a plain key on the Sofle, where Ctrl is a hold on Space).
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+    Mod+Shift+4 { move-column-to-workspace 4; }
+    Mod+Shift+5 { move-column-to-workspace 5; }
+    Mod+Shift+6 { move-column-to-workspace 6; }
+    Mod+Shift+7 { move-column-to-workspace 7; }
+    Mod+Shift+8 { move-column-to-workspace 8; }
+    Mod+Shift+9 { move-column-to-workspace 9; }
 
     // Alternatively, there are commands to move just a single window:
     // Mod+Ctrl+1 { move-window-to-workspace 1; }
@@ -568,7 +619,7 @@ binds {
     // Cycling through the presets in reverse order is also possible.
     Mod+Shift+R { switch-preset-column-width-back; }
 
-    Mod+Ctrl+Shift+R { switch-preset-window-height; }
+    Mod+Alt+R { switch-preset-window-height; }
     Mod+Ctrl+R { reset-window-height; }
 
     Mod+F { maximize-column; }
@@ -584,7 +635,8 @@ binds {
     // Makes the column "fill the rest of the space".
     Mod+Ctrl+F { expand-column-to-available-width; }
 
-    Mod+C { center-column; }
+    // Z for zen: the C key opens the editor.
+    Mod+Z { center-column; }
 
     // Center all fully visible columns on screen.
     Mod+Ctrl+C { center-visible-columns; }
@@ -605,8 +657,8 @@ binds {
     Mod+Shift+Equal { set-window-height "+10%"; }
 
     // Move the focused window between the floating and the tiling layout.
-    Mod+V       { toggle-window-floating; }
-    Mod+Shift+V { switch-focus-between-floating-and-tiling; }
+    Mod+V     { toggle-window-floating; }
+    Mod+Alt+V { switch-focus-between-floating-and-tiling; }
 
     // Toggle tabbed column display mode.
     // Windows in this column will appear as vertical tabs,
@@ -633,7 +685,7 @@ binds {
     //
     // The allow-inhibiting=false property can be applied to other binds as well,
     // which ensures niri always processes them, even when an inhibitor is active.
-    Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
+    Mod+Alt+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
 
     // The quit action will show a confirmation dialog to avoid accidental exits.
     Mod+Shift+E { quit; }

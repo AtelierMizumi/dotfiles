@@ -30,6 +30,7 @@ Plan: [`docs/superpowers/plans/2026-10-24-niri-noctalia-rice.md`](docs/superpowe
 | `niri/.config/niri/config.kdl` | niri config (stow package `niri`) |
 | `niri/.config/xdg-desktop-portal/niri-portals.conf` | portal routing for the niri session (stow package `niri`) |
 | `noctalia/.config/noctalia/config.toml`, `palettes/Mizu.json` | Noctalia overlay and the Mizu palette (stow package `noctalia`) |
+| `docs/USAGE.md` | user guide in Vietnamese: keymap for laptop and Sofle, daily coding workflow, idle, rollback |
 | `docs/baseline/niri-config.default.kdl` | the untouched default niri config this one started from |
 | `scripts/check-plasma-intact.sh`, `scripts/check_noctalia.py` | proof that Plasma is untouched (see Checks) |
 | `tests/` | `bash tests/run-all.sh` runs shellcheck, the bash tests and the Python tests |

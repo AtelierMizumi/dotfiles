@@ -39,6 +39,21 @@ class NoctaliaConfigTest(unittest.TestCase):
     def test_clock_format_is_japanese_date_and_time(self):
         self.assertEqual(self.config["widget"]["clock"]["format"], "{:%-m}月{:%-d}日 {:%a} {:%H:%M}")
 
+    def test_idle_turns_the_screens_off_after_30_minutes_then_locks_after_45(self):
+        # Desk setup with two fixed monitors: long timeouts, and no automatic suspend that would cut builds short.
+        idle = self.config["idle"]
+        self.assertEqual(idle["behavior_order"], ["screen-off", "lock"])
+        screen_off = idle["behavior"]["screen-off"]
+        self.assertEqual((screen_off["action"], screen_off["timeout"]), ("screen_off", 1800))
+        lock = idle["behavior"]["lock"]
+        self.assertEqual((lock["action"], lock["timeout"]), ("lock", 2700))
+        self.assertNotIn("suspend", idle["behavior"])
+
+    def test_default_wallpaper_is_coldripple(self):
+        path = self.config["wallpaper"]["default"]["path"]
+        self.assertEqual(path, "/usr/share/wallpapers/ColdRipple/contents/images/2560x1440.jpg")
+        self.assertTrue(Path(path).is_file(), f"{path} does not exist on this machine")
+
     def test_no_per_monitor_bar_tables(self):
         for name, bar in self.config.get("bar", {}).items():
             self.assertNotIn("monitor", bar, f"[bar.{name}] has per-monitor overrides")
