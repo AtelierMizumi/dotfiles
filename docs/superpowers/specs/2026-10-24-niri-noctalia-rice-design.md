@@ -1,6 +1,7 @@
 # niri + Noctalia rice: design spec
 
-Date: 2026-10-24 · Status: draft for review · Repo: `AtelierMizumi/dotfiles` (private)
+Date: 2026-10-24 · Status: approved by the user on 2026-10-24 (decisions: screen share and Discord are required,
+so the GNOME portal is used; custom palette "Mizu") · Repo: `AtelierMizumi/dotfiles` (private)
 
 ## 1. Intent
 
@@ -111,9 +112,15 @@ Rules:
 - Existing `~/.config/niri/config.kdl` (199 active lines, looks like the upstream default) is copied into the repo as
   the baseline commit and backed up as `config.kdl.bak.<date>` before stowing.
 - Packages to add (user runs `! sudo pacman -S ...`, interactively, abort if the prompt removes or replaces any
-  `plasma-*`, `kde-*` or `xdg-desktop-portal-kde`): `noctalia`, `xwayland-satellite`, and a portal choice
-  (open question 2). A read-only `pacman -Sp` dry run on 2026-10-24 for `niri noctalia xdg-desktop-portal-gnome
+  `plasma-*`, `kde-*` or `xdg-desktop-portal-kde`): `stow`, `noctalia`, `xwayland-satellite`,
+  `xdg-desktop-portal-gnome` (decided: screen share and Discord are required, and niri screencasting goes through the
+  GNOME portal). A read-only `pacman -Sp` dry run on 2026-10-24 for `niri noctalia xdg-desktop-portal-gnome
   xwayland-satellite` listed only additions.
+- The niri package already ships `/usr/share/xdg-desktop-portal/niri-portals.conf`
+  (`default=gnome;gtk;`, `Access` and `Notification` = gtk, `Secret=gnome-keyring`). No portal config is added by this repo.
+- **Do not install `gnome-keyring`.** It `Provides: org.freedesktop.secrets`, the same D-Bus name KWallet serves for
+  Plasma. It is not pulled in by `xdg-desktop-portal-gnome` (checked with `pacman -Sp`). Consequence: the niri `Secret`
+  portal has no backend, so secret storage in niri-session apps may not persist (open question 7).
 - Uninstall: `stow -D`, remove the two Noctalia dirs below, restore the niri backup.
   `~/.local/state/noctalia`, `~/.cache/noctalia` (from the Noctalia uninstall page). No template files exist because
   all templates are off.
@@ -133,6 +140,8 @@ Rules:
   Red then green. Cases: unchanged state exits 0; modified `kdeglobals` exits 1 and names the file; missing
   `xdg-desktop-portal-kde` exits 1; template id in `settings.toml` exits 1; `sync_color_scheme = true` exits 1;
   missing snapshot exits 2. Plain bash runner; `shellcheck` is installed, `bats` is not.
+- **Test-first now, because niri is already installed:** `niri validate -c <file>` (verified: prints `config is valid`)
+  for the repo `config.kdl`, and a Python check of `Mizu.json` (16 roles, hex format, the contrast ratios in 3.1).
 - **After the package is installed, not before:** `noctalia config validate <dir>`. It exits 0 on warnings such as
   unknown keys, so the test must fail on **any output**, not on exit code alone. This is also where
   `source = "custom"` gets settled. No config test exists or is implied before installation.
@@ -153,8 +162,8 @@ Rules:
 
 1. Docs say `source = "custom"`; `example.toml` lists only `builtin | wallpaper | community`. Settled by
    `noctalia config validate` after install. Fallback: built-in Tokyo-Night.
-2. Portal choice. The niri wiki installs `xdg-desktop-portal-gnome`, which pulls `nautilus`, `gvfs`, `graphviz`,
-   `ghostscript` and more. Alternative: only `xdg-desktop-portal-gtk` (already installed), at the cost of screencasting.
+2. ~~Portal choice~~ Resolved: `xdg-desktop-portal-gnome` is installed (it pulls `nautilus`, `gvfs`, `graphviz`,
+   `ghostscript` and more) because screen share and Discord are required.
 3. Non-ASCII literals (`月`, `日`) in the clock format are only implied by the docs ("literal text is copied through").
 4. How to pin niri's render device to the iGPU; the Debug Options page was not read.
 5. `font_family` fallback syntax is **parked**. The default `sans-serif` for Japanese resolves to WenQuanYi Zen Hei,
@@ -162,3 +171,6 @@ Rules:
    `Source Han Sans` (the Japanese family, installed via `adobe-source-han-sans-otc-fonts`) is the candidate.
    No global fontconfig change.
 6. Multi-monitor behavior with mixed scales (`panel_overlap`) is untested on this hardware.
+7. Secret storage in the niri session. `niri-portals.conf` names `gnome-keyring` for `Secret`, which stays uninstalled
+   to protect KWallet. Check at phase 3 whether the Discord login persists across a restart. Fixing it, if it does not,
+   is a separate decision.
