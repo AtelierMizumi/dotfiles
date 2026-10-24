@@ -1,0 +1,20 @@
+# secrets
+.env
+.env.*
+*.pem
+*.key
+credentials*
+secrets*
+
+# binary documents (blocked by commit hook)
+*.docx
+*.pdf
+*.xlsx
+*.pptx
+*.zip
+
+# generated / local state
+*.log
+*.bak
+*.swp
+.DS_Store
