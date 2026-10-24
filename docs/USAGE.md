@@ -8,7 +8,8 @@ bảng các phím quan trọng ngay trên màn hình.
 | Muốn | Bấm |
 |---|---|
 | Mở terminal (ghostty) | `Super+T` hoặc `Super+Return` |
-| Mở app / tìm file / chạy lệnh | `Super+Space` hoặc `Super+D` |
+| Mở app / tìm file / chạy lệnh | `Super+D` |
+| Đổi gõ tiếng Anh / tiếng Việt | `Super+Space` |
 | Mở trình duyệt, file manager, VS Code | `Super+B`, `Super+E`, `Super+C` |
 | Đóng cửa sổ | `Super+Q` |
 | Chuyển sang cột bên trái / phải | `Super+H`, `Super+L` |
@@ -25,7 +26,7 @@ Super là phím Windows trên laptop, và là **phím ngón cái trái** (`LGUI`
   PgUp, PgDn hay mũi tên. Các biến thể mũi tên chỉ là phần thêm cho laptop (hoặc giữ layer NAV trên Sofle).
 - Phím sửa đổi thứ hai là **Shift hoặc Alt**, không phải Ctrl: trên Sofle, Ctrl chỉ có khi giữ `Space`, khó chạm cùng
   Super. Alt nằm ở ngón út trái, Shift ở ngón út trái hàng dưới.
-- Trên Sofle, `Super+Space`, `Super+-` và `Super+=` là ba phím ngón cái cạnh nhau, bấm bằng một tay.
+- Trên Sofle, `Super+Space` (đổi bộ gõ), `Super+-` và `Super+=` là ba phím ngón cái cạnh nhau, bấm bằng một tay.
 
 ## Bảng phím
 
@@ -42,12 +43,22 @@ Super là phím Windows trên laptop, và là **phím ngón cái trái** (`LGUI`
 
 | Phím | Việc |
 |---|---|
-| `Super+Space`, `Super+D` | launcher |
+| `Super+D` | launcher |
 | `Super+S` | control center (mạng, âm thanh, độ sáng, thông báo) |
 | `Super+Alt+S` | settings của Noctalia |
 | `Super+Shift+V` | lịch sử clipboard |
 | `Super+N` | bật/tắt Do Not Disturb |
 | `Super+Esc`, `Super+Alt+L` | khóa màn hình |
+
+### Bộ gõ
+
+| Phím | Việc |
+|---|---|
+| `Super+Space` | chuyển qua lại giữa bàn phím US và bộ gõ đang dùng gần nhất (lúc đầu là Lotus, tiếng Việt) |
+| `Super+Alt+Space` | chọn thẳng tiếng Việt (Lotus) |
+| `Super+Shift+Space` | chọn thẳng tiếng Nhật (anthy) |
+
+Chi tiết và cách xử lý khi gõ không ra tiếng Việt: xem mục "Gõ tiếng Việt và tiếng Nhật" bên dưới.
 
 ### Di chuyển và cửa sổ
 
@@ -120,8 +131,24 @@ tách cửa sổ vào cột), `Super+[` và `Super+]`, các biến thể `Super+
   số cao nhất của nó.
 - **Clipboard:** `Super+Shift+V` mở lịch sử, chọn mục để dán lại.
 - **Tập trung:** `Super+N` bật Do Not Disturb khi họp hoặc code sâu.
-- **Gõ tiếng Việt và tiếng Nhật:** `fcitx5` tự khởi động cùng session. Đổi bộ gõ bằng phím bạn đã đặt trong
-  `fcitx5-configtool`.
+- **Gõ tiếng Việt và tiếng Nhật:** xem mục riêng ngay bên dưới.
+
+## Gõ tiếng Việt và tiếng Nhật
+
+`fcitx5` tự khởi động cùng session niri (mục autostart của hệ thống), và `/etc/environment` đã đặt `GTK_IM_MODULE`,
+`QT_IM_MODULE`, `XMODIFIERS` cho mọi session, giống như trên Plasma. Nhóm bộ gõ trong
+`~/.config/fcitx5/profile` là: bàn phím US, Lotus (tiếng Việt, mặc định Telex) và anthy (tiếng Nhật).
+
+- **Vì sao phím đổi bộ gõ nằm trong niri:** cấu hình fcitx5 của bạn đổi bộ gõ bằng `Super+Space`, nhưng niri lấy phím
+  đã được bind trước mọi ứng dụng. Nên niri tự chạy việc đổi bộ gõ qua `fcitx5-remote`, kể cả khi chưa có ô nhập nào
+  được focus. Trạng thái bộ gõ nhớ riêng cho từng cửa sổ (`ShareInputState=No`).
+- **Kiểm tra nhanh trong terminal:** `fcitx5-remote -n` in tên bộ gõ hiện tại (`keyboard-us`, `lotus` hoặc `anthy`);
+  `fcitx5-remote -s lotus` chọn Lotus ngay, `fcitx5-remote -s keyboard-us` về gõ thường.
+- **Lotus cần dịch vụ nền:** `fcitx5-lotus-server@<tên user>` phải đang chạy (`systemctl status
+  fcitx5-lotus-server@$USER`); trên máy này nó đã bật. Tùy chỉnh kiểu gõ bằng `fcitx5-lotus-settings`.
+- **Nếu gõ không ra dấu trong một ứng dụng:** thử chế độ khác của Lotus cho ứng dụng đó (Lotus có nhiều chế độ gõ, xem
+  `fcitx5-lotus-settings`), và lưu ý ứng dụng Electron (VS Code, Discord, Vesktop) thường chạy qua XWayland nên đi
+  bằng `XMODIFIERS` (chưa kiểm chứng trên máy này).
 
 ## Khóa và tắt màn hình
 
@@ -151,5 +178,7 @@ của `noctalia/.config/noctalia/config.toml`; Noctalia tự nạp lại khi lư
 - Rule mở VS Code và Antigravity full width dựa trên app-id `code` và `antigravity`; chưa chạy thật để xác nhận.
 - Nếu chữ trong VS Code bị mờ ở scale 1.25 hoặc bộ gõ không nhận trong VS Code, đó là do app chạy qua XWayland. Cách xử
   lý (cờ Electron cho Wayland) sẽ đổi hành vi VS Code cả trên Plasma, nên chưa đưa vào cấu hình.
+- Việc đổi bộ gõ đã được kiểm tra bằng `fcitx5-remote` (đổi được giữa `keyboard-us`, `lotus`, `anthy`), nhưng gõ thật
+  trong từng ứng dụng với Lotus trong niri thì chưa.
 - Chưa kiểm tra thực tế các tổ hợp phím trên Sofle; chúng được chọn từ keymap `sofle.keymap` trong
   `~/Projects/Keyboards/sofle-v2-oled-zmk-firmware`.

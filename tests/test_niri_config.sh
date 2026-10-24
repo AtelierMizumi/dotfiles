@@ -97,7 +97,7 @@ t_settings_window_floats_1080x920() {
 t_launcher_control_center_settings_binds() {
   local active
   active=$(active_lines "$CONFIG") || fail "config unreadable"
-  grep -qE '^[[:space:]]*Mod\+Space[[:space:]].*spawn-sh "noctalia msg panel-toggle launcher"' <<<"$active" || fail "Mod+Space launcher bind missing"
+  ! grep -qE '^[[:space:]]*Mod\+Space[[:space:]].*panel-toggle launcher' <<<"$active" || fail "Mod+Space is the launcher again; it is the input method switch"
   grep -qE '^[[:space:]]*Mod\+D[[:space:]].*spawn-sh "noctalia msg panel-toggle launcher"' <<<"$active" || fail "Mod+D launcher bind missing"
   grep -qE '^[[:space:]]*Mod\+S[[:space:]].*spawn-sh "noctalia msg panel-toggle control-center"' <<<"$active" || fail "Mod+S control center bind missing"
   grep -qE '^[[:space:]]*Mod\+Alt\+S[[:space:]].*spawn-sh "noctalia msg settings-toggle"' <<<"$active" || fail "Mod+Alt+S settings bind missing"
@@ -211,6 +211,16 @@ t_layout_binds_moved_to_free_keys() {
   has_bind 'Mod+Alt+Escape' 'toggle-keyboard-shortcuts-inhibit;' || fail "Mod+Alt+Escape does not toggle the shortcut inhibitor"
   has_bind 'Mod+V' 'toggle-window-floating;' || fail "Mod+V no longer toggles floating"
   has_bind 'Mod+F' 'maximize-column;' || fail "Mod+F no longer maximizes the column"
+}
+
+# The fcitx5 config of this machine switches input methods with Super+space (EnumerateForwardKeys). niri takes a
+# bound key before any app, so a Super+Space bind that is not the switch would make Vietnamese typing unreachable.
+# fcitx5-remote talks to the running fcitx5 over D-Bus: -t toggles keyboard-us <-> lotus, -s <name> picks an engine.
+t_super_space_switches_the_input_method() {
+  has_bind 'Mod+Space' 'spawn "fcitx5-remote" "-t"' || fail "Mod+Space does not toggle English/Vietnamese with fcitx5-remote"
+  has_bind 'Mod+Shift+Space' 'spawn "fcitx5-remote" "-s" "anthy"' || fail "Mod+Shift+Space does not select the Japanese engine"
+  # The toggle returns to the last used engine, so Vietnamese needs a direct bind once Japanese has been used.
+  has_bind 'Mod+Alt+Space' 'spawn "fcitx5-remote" "-s" "lotus"' || fail "Mod+Alt+Space does not select the Vietnamese engine"
 }
 
 t_orca_bind_removed() {

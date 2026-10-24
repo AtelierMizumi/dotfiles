@@ -399,7 +399,7 @@ binds {
     // Design rules: every bind is Super plus at most two more keys, made of letters, digits and the thumb keys of
     // the Sofle base layer (no F-keys, Print, Home/End, Page keys or arrows needed; the arrow variants are extras
     // for laptop keyboards). Super is the left thumb key on the Sofle, so Super+Space, Super+Minus and
-    // Super+Equal are one-hand chords there. See docs/USAGE.md.
+    // Super+Equal are one-hand chords there (Super+Space switches the typing language). See docs/USAGE.md.
 
     // Apps.
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
@@ -408,9 +408,16 @@ binds {
     Mod+E hotkey-overlay-title="Open the File Manager: dolphin" { spawn "dolphin"; }
     Mod+C hotkey-overlay-title="Open the Editor: VS Code" { spawn "code"; }
 
+    // Typing language. The fcitx5 config switches input methods with Super+space, and niri takes a bound key before
+    // any app does, so niri runs the switch itself through fcitx5-remote: -t toggles keyboard-us <-> lotus
+    // (Vietnamese), -s picks an engine. This also works when no text field has the focus. The toggle returns to the
+    // last used engine, so Vietnamese and Japanese also have a direct bind each.
+    Mod+Space hotkey-overlay-title="Typing: toggle English / last engine" { spawn "fcitx5-remote" "-t"; }
+    Mod+Alt+Space hotkey-overlay-title="Typing: Vietnamese (lotus)" { spawn "fcitx5-remote" "-s" "lotus"; }
+    Mod+Shift+Space hotkey-overlay-title="Typing: Japanese (anthy)" { spawn "fcitx5-remote" "-s" "anthy"; }
+
     // Noctalia shell.
     Mod+D hotkey-overlay-title="Run an Application: Noctalia launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
-    Mod+Space hotkey-overlay-title=null { spawn-sh "noctalia msg panel-toggle launcher"; }
     Mod+S hotkey-overlay-title="Control Center: Noctalia" { spawn-sh "noctalia msg panel-toggle control-center"; }
     // Noctalia's docs use Mod+Comma for settings, but niri's Mod+Comma is consume-window-into-column.
     Mod+Alt+S hotkey-overlay-title="Settings: Noctalia" { spawn-sh "noctalia msg settings-toggle"; }
