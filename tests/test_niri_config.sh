@@ -65,10 +65,10 @@ t_fuzzel_not_referenced() {
   ! grep -qi 'fuzzel' "$CONFIG" || fail "fuzzel is still referenced"
 }
 
-t_noctalia_started_with_scoped_lc_time() {
+t_shell_started_via_shell_start() {
   local active
   active=$(active_lines "$CONFIG") || fail "config unreadable"
-  grep -qxF 'spawn-at-startup "env" "LC_TIME=ja_JP.UTF-8" "noctalia"' <<<"$active" || fail "scoped noctalia startup line missing"
+  grep -qxF 'spawn-at-startup "~/.config/niri/scripts/shell-start"' <<<"$active" || fail "shell-start startup line missing"
 }
 
 # Noctalia renders ~/.config/niri/colors.kdl from the wallpaper palette. Includes are positional, so it must come after
@@ -109,9 +109,9 @@ t_launcher_control_center_settings_binds() {
   local active
   active=$(active_lines "$CONFIG") || fail "config unreadable"
   ! grep -qE '^[[:space:]]*Mod\+Space[[:space:]].*panel-toggle launcher' <<<"$active" || fail "Mod+Space is the launcher again; it is the input method switch"
-  grep -qE '^[[:space:]]*Mod\+D[[:space:]].*spawn-sh "noctalia msg panel-toggle launcher"' <<<"$active" || fail "Mod+D launcher bind missing"
-  grep -qE '^[[:space:]]*Mod\+S[[:space:]].*spawn-sh "noctalia msg panel-toggle control-center"' <<<"$active" || fail "Mod+S control center bind missing"
-  grep -qE '^[[:space:]]*Mod\+Alt\+S[[:space:]].*spawn-sh "noctalia msg settings-toggle"' <<<"$active" || fail "Mod+Alt+S settings bind missing"
+  grep -qE '^[[:space:]]*Mod\+D[[:space:]].*spawn-sh "~/\.config/niri/scripts/shell-ipc launcher"' <<<"$active" || fail "Mod+D launcher bind missing"
+  grep -qE '^[[:space:]]*Mod\+S[[:space:]].*spawn-sh "~/\.config/niri/scripts/shell-ipc quick"' <<<"$active" || fail "Mod+S control center bind missing"
+  grep -qE '^[[:space:]]*Mod\+Alt\+S[[:space:]].*spawn-sh "~/\.config/niri/scripts/shell-ipc settings"' <<<"$active" || fail "Mod+Alt+S settings bind missing"
 }
 
 t_default_column_binds_kept() {
@@ -128,29 +128,30 @@ t_xdg_activation_honored() {
 }
 
 t_lc_time_comment_is_accurate() {
-  # Apps started from Noctalia's launcher inherit its environment, so the comment must not claim isolation.
+  # Apps started from the launcher inherit its environment, so the comment must not claim isolation.
   grep -q 'apps it launches' "$CONFIG" || fail "the LC_TIME comment does not say apps launched by Noctalia inherit it"
   ! grep -q 'any other app' "$CONFIG" || fail "the LC_TIME comment still claims no other app is affected"
 }
 
-t_lock_bind_uses_noctalia() {
+t_lock_bind_uses_shell_ipc() {
   local active
   active=$(active_lines "$CONFIG") || fail "config unreadable"
-  grep -qE '^[[:space:]]*Super\+Alt\+L[[:space:]].*spawn "noctalia" "msg" "session" "lock"' <<<"$active" || fail "Super+Alt+L does not lock through Noctalia"
+  grep -qE '^[[:space:]]*Super\+Alt\+L[[:space:]].*spawn-sh "~/\.config/niri/scripts/shell-ipc lock"' <<<"$active" || fail "Super+Alt+L does not lock through shell-ipc"
   ! grep -qi 'swaylock' "$CONFIG" || fail "swaylock (not installed) is still referenced"
 }
 
-t_hardware_keys_use_noctalia_ipc() {
+t_hardware_keys_use_shell_ipc() {
   local active
   active=$(active_lines "$CONFIG") || fail "config unreadable"
   local pair key action
   for pair in \
     'XF86AudioRaiseVolume|volume-up' 'XF86AudioLowerVolume|volume-down' 'XF86AudioMute|volume-mute' \
+    'XF86AudioMicMute|mic-mute' \
     'XF86MonBrightnessUp|brightness-up' 'XF86MonBrightnessDown|brightness-down' \
-    'XF86AudioPlay|media toggle' 'XF86AudioNext|media next' 'XF86AudioPrev|media previous' 'XF86AudioStop|media stop'; do
+    'XF86AudioPlay|media-play' 'XF86AudioNext|media-next' 'XF86AudioPrev|media-prev' 'XF86AudioStop|media-play'; do
     key=${pair%%|*}
     action=${pair#*|}
-    grep -qE "^[[:space:]]*${key}[[:space:]].*noctalia msg ${action}" <<<"$active" || fail "$key does not run 'noctalia msg $action'"
+    grep -qE "^[[:space:]]*${key}[[:space:]].*shell-ipc ${action}" <<<"$active" || fail "$key does not run 'shell-ipc $action'"
   done
   ! grep -qE 'brightnessctl|playerctl' "$CONFIG" || fail "brightnessctl/playerctl (not installed) are still referenced"
 }
@@ -177,10 +178,10 @@ t_app_binds() {
   done
 }
 
-t_noctalia_binds() {
+t_shell_binds() {
   local pair combo text
-  for pair in 'Mod+Shift+V|noctalia msg panel-toggle clipboard' 'Mod+N|noctalia msg notification-dnd-toggle' \
-    'Mod+Escape|"noctalia" "msg" "session" "lock"' 'Super+Alt+L|"noctalia" "msg" "session" "lock"'; do
+  for pair in 'Mod+Shift+V|shell-ipc clipboard' 'Mod+N|shell-ipc dnd' 'Mod+Alt+W|shell-ipc wallpaper-next' \
+    'Mod+Escape|shell-ipc lock' 'Super+Alt+L|shell-ipc lock'; do
     combo=${pair%%|*}
     text=${pair#*|}
     has_bind "$combo" "$text" || fail "$combo does not run $text"
@@ -189,8 +190,8 @@ t_noctalia_binds() {
 
 t_screenshot_and_brightness_binds() {
   has_bind 'Mod+Shift+S' 'screenshot;' || fail "Mod+Shift+S does not take a screenshot"
-  has_bind 'Mod+Alt+Minus' 'noctalia msg brightness-down' || fail "Mod+Alt+Minus does not lower the brightness"
-  has_bind 'Mod+Alt+Equal' 'noctalia msg brightness-up' || fail "Mod+Alt+Equal does not raise the brightness"
+  has_bind 'Mod+Alt+Minus' 'shell-ipc brightness-down' || fail "Mod+Alt+Minus does not lower the brightness"
+  has_bind 'Mod+Alt+Equal' 'shell-ipc brightness-up' || fail "Mod+Alt+Equal does not raise the brightness"
 }
 
 t_movement_binds_use_letters_and_one_modifier() {
@@ -277,7 +278,7 @@ t_no_env_leak() {
   ! grep -q 'QT_QPA_PLATFORMTHEME' "$CONFIG" || fail "QT_QPA_PLATFORMTHEME is set"
   active=$(active_lines "$CONFIG")
   count=$(grep -c 'LC_TIME' <<<"$active")
-  [[ "$count" -eq 1 ]] || fail "LC_TIME appears on $count active lines, expected only the spawn line"
+  [[ "$count" -eq 0 ]] || fail "LC_TIME appears on $count active lines; environment variables should not leak into niri config"
 }
 
 passed=0

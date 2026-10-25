@@ -20,4 +20,5 @@ __pycache__/
 *.log
 *.bak
 *.swp
+*SESSION-LIMIT*
 .DS_Store

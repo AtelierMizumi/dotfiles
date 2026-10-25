@@ -40,15 +40,16 @@ Super là phím Windows trên laptop, và là **phím ngón cái trái** (`LGUI`
 | `Super+E` | file manager (dolphin) |
 | `Super+C` | VS Code |
 
-### Noctalia (shell)
+### Desktop shell (mizu / Noctalia)
 
 | Phím | Việc |
 |---|---|
 | `Super+D` | launcher |
-| `Super+S` | control center (mạng, âm thanh, độ sáng, thông báo) |
-| `Super+Alt+S` | settings của Noctalia |
+| `Super+S` | control center (quick panel) |
+| `Super+Alt+S` | settings của shell |
 | `Super+Shift+V` | lịch sử clipboard |
 | `Super+N` | bật/tắt Do Not Disturb |
+| `Super+Alt+W` | chuyển hình nền kế tiếp (palette tự đổi theo) |
 | `Super+Esc`, `Super+Alt+L` | khóa màn hình |
 
 ### Bộ gõ
@@ -101,7 +102,7 @@ Chi tiết và cách xử lý khi gõ không ra tiếng Việt: xem mục "Gõ t
 | `Super+Shift+S` | chụp một vùng (laptop: `Print` cũng được) |
 | `Super+Alt+-`, `Super+Alt+=` | giảm / tăng độ sáng (cho Sofle, không có phím độ sáng) |
 | `XF86MonBrightnessDown`, `XF86MonBrightnessUp` | phím độ sáng của laptop |
-| `XF86AudioLowerVolume`, `XF86AudioRaiseVolume`, `XF86AudioMute` | âm lượng (phím laptop, núm xoay Sofle) |
+| `XF86AudioLowerVolume`, `XF86AudioRaiseVolume`, `XF86AudioMute`, `XF86AudioMicMute` | âm lượng và micro (phím laptop, núm xoay Sofle) |
 | `XF86AudioPlay`, `XF86AudioStop`, `XF86AudioPrev`, `XF86AudioNext` | điều khiển nhạc |
 
 Các phím mặc định khác của niri vẫn hoạt động, ví dụ `Super+M` (phóng to sát mép), `Super+,` và `Super+.` (gộp hoặc

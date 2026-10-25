@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+shell_choice_file="$config_home/niri/shell"
+
+shell="noctalia"
+if [[ -f "$shell_choice_file" ]]; then
+  configured=$(tr -d '[:space:]' < "$shell_choice_file")
+  if [[ "$configured" == "mizu" ]]; then
+    shell="mizu"
+  fi
+fi
+
+if [[ "$shell" == "mizu" ]]; then
+  if command -v qs >/dev/null 2>&1; then
+    exec env LC_TIME=ja_JP.UTF-8 qs -c mizu
+  else
+    exec env LC_TIME=ja_JP.UTF-8 quickshell -c mizu
+  fi
+else
+  exec env LC_TIME=ja_JP.UTF-8 noctalia
+fi

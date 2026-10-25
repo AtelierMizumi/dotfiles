@@ -122,7 +122,10 @@ case "${1:-}" in
     [[ $# -ge 1 ]] || usage
     require_session >/dev/null || exit 2
     shell_dir=$(cat "$STATE/shell_dir")
-    MIZU_DEV_STATE="$STATE" run_qs -p "$shell_dir" ipc "$@"
+    # After a hot reload Quickshell 0.3.2 no longer lists the instance under its shell path, so `-p <dir> ipc` finds
+    # "no running instances"; the process id still works.
+    shell_pid=$(pgrep -n -f "^$STAGE/root/usr/bin/quickshell -p $shell_dir\$") || die "the shell is not running (see: nested-shell.sh log)"
+    MIZU_DEV_STATE="$STATE" run_qs ipc --pid "$shell_pid" "$@"
     ;;
   run)
     shift

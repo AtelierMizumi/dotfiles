@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+shell_choice_file="$config_home/niri/shell"
+
+shell="noctalia"
+if [[ -f "$shell_choice_file" ]]; then
+  configured=$(tr -d '[:space:]' < "$shell_choice_file")
+  if [[ "$configured" == "mizu" ]]; then
+    shell="mizu"
+  fi
+fi
+
+action="${1-}"
+shift || true
+
+qs_cmd="qs"
+if ! command -v qs >/dev/null 2>&1 && command -v quickshell >/dev/null 2>&1; then
+  qs_cmd="quickshell"
+fi
+
+case "$action" in
+  launcher)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu launcher
+    else
+      exec noctalia msg panel-toggle launcher
+    fi
+    ;;
+  quick)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu quick
+    else
+      exec noctalia msg panel-toggle control-center
+    fi
+    ;;
+  settings)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu settings
+    else
+      exec noctalia msg settings-toggle
+    fi
+    ;;
+  clipboard)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu clipboard
+    else
+      exec noctalia msg panel-toggle clipboard
+    fi
+    ;;
+  dnd)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu dnd
+    else
+      exec noctalia msg notification-dnd-toggle
+    fi
+    ;;
+  lock)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu lock
+    else
+      exec noctalia msg session lock
+    fi
+    ;;
+  volume-up)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu volumeUp
+    else
+      exec noctalia msg volume-up
+    fi
+    ;;
+  volume-down)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu volumeDown
+    else
+      exec noctalia msg volume-down
+    fi
+    ;;
+  volume-mute)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu volumeMute
+    else
+      exec noctalia msg volume-mute
+    fi
+    ;;
+  mic-mute)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu micMute
+    else
+      exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+    fi
+    ;;
+  brightness-up)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu brightnessUp
+    else
+      exec noctalia msg brightness-up
+    fi
+    ;;
+  brightness-down)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu brightnessDown
+    else
+      exec noctalia msg brightness-down
+    fi
+    ;;
+  media-play)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu mediaPlay
+    else
+      exec noctalia msg media toggle
+    fi
+    ;;
+  media-next)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu mediaNext
+    else
+      exec noctalia msg media next
+    fi
+    ;;
+  media-prev)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu mediaPrev
+    else
+      exec noctalia msg media previous
+    fi
+    ;;
+  wallpaper-next)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu wallpaperNext
+    else
+      exec noctalia msg wallpaper-random
+    fi
+    ;;
+  wallpaper)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu wallpaper "$@"
+    else
+      exec noctalia msg wallpaper-set "$@"
+    fi
+    ;;
+  palette)
+    if [[ "$shell" == "mizu" ]]; then
+      exec "$qs_cmd" -c mizu ipc call mizu palette
+    else
+      exec noctalia theme
+    fi
+    ;;
+  *)
+    echo "Unknown shell-ipc action: $action" >&2
+    exit 1
+    ;;
+esac
