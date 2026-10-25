@@ -9,8 +9,9 @@
 #   nested-shell.sh status | stop
 #
 # The shell sees a private HOME, private XDG directories and a private session D-Bus, so scripts of a config under test
-# (theme sync, gsettings, ...) cannot reach the real files. quickshell comes from the staging directory made by
-# scripts/dev/stage-quickshell.sh (RICE_STAGE, default ~/.cache/rice-staging), not from the system.
+# (theme sync, gsettings, ...) cannot reach the real files. It runs the installed quickshell, or the one staged by
+# scripts/dev/stage-quickshell.sh (RICE_STAGE, default ~/.cache/rice-staging) when that directory exists: a way to try
+# a newer package before installing it.
 # State lives in MIZU_DEV_STATE (default ~/.cache/mizu-dev). Exit codes: 0 ok, 1 status "stopped", 2 failed, 64 usage.
 set -uo pipefail
 

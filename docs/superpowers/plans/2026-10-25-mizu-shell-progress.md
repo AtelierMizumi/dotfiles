@@ -43,7 +43,9 @@ Worktree `.claude/worktrees/smart-shell`, branch `smart-shell` (from local main 
 
 ## Tools
 
-- `scripts/dev/nested-shell.sh start <dir>|shot <name>|ipc <args>|log|stop` (needs `scripts/dev/stage-quickshell.sh` once).
+- `scripts/dev/nested-shell.sh start <dir>|shot <name>|ipc <args>|log|stop` (runs the installed quickshell; with
+  `scripts/dev/stage-quickshell.sh` it can run a staged one instead). `scripts/dev/measure-idle.sh <dir>` prints the
+  idle memory and CPU.
   Per-agent state: `MIZU_DEV_STATE=~/.cache/mizu-dev-<name>`. The sandbox sees the wallpaper folder through a symlink at
   `$MIZU_DEV_STATE/sandbox-home/Pictures/Wallpapers` (create it once).
 - `python3 -I -B scripts/dev/qml_unresolved.py <mizu dir> [--files NAME]` names that resolve to no file and no Qt type.

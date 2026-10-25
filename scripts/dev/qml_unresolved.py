@@ -9,12 +9,11 @@ from collections import defaultdict
 from pathlib import Path
 
 mizu = Path(sys.argv[1])
-stage_qml = Path.home() / ".cache/rice-staging/root/usr/lib/qt6/qml"
 system_qml = Path("/usr/lib/qt6/qml")
 
 builtins = set("Math JSON Date Object Array String Number Qt Boolean Promise Error RegExp Infinity NaN Symbol Map Set "
                "Intl TypeError ReferenceError SyntaxError RangeError Function Quickshell".split())
-for base in (stage_qml, system_qml):
+for base in (system_qml,):
     if not base.exists():
         continue
     for path in base.rglob("*"):
