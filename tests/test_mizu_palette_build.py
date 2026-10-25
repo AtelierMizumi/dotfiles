@@ -335,5 +335,45 @@ def _gamma(lum):
     return 12.92 * lum if lum <= 0.0031308 else 1.055 * lum ** (1 / 2.4) - 0.055
 
 
+
+
+class ChipTest(unittest.TestCase):
+    """The chip (a pill behind small labels) must not glare, and its label must stand out from it."""
+
+    def build_with(self, mode, **role_changes):
+        def generator(scheme, mode_):
+            changed = roles(mode_)
+            changed.update(role_changes)
+            return changed
+
+        return build.build(solid((0.2, 0.4, 0.8)), generator, {}, mode)
+
+    def chip_and_label(self, tokens):
+        return (color.hex_to_rgb(tokens["color"]["chip"]), color.hex_to_rgb(tokens["color"]["onChip"]))
+
+    def test_a_neon_container_is_calmed_down_in_dark_mode(self):
+        tokens = self.build_with("dark", secondary_container="#1849e3", on_secondary_container="#e8edff")
+        L, C, _ = color.to_lch(self.chip_and_label(tokens)[0])
+        self.assertLessEqual(C, 26.0, "chip chroma")
+        self.assertGreaterEqual(L, 22.0)
+        self.assertLessEqual(L, 34.0)
+
+    def test_a_calm_container_is_left_alone_in_dark_mode(self):
+        tokens = self.build_with("dark")
+        self.assertEqual(tokens["color"]["chip"], "#2c3a52")
+
+    def test_a_dark_chip_never_gets_a_dark_label(self):
+        tokens = self.build_with("dark", on_secondary_container="#10131a")
+        chip, label = self.chip_and_label(tokens)
+        self.assertGreater(color.luminance(label), color.luminance(chip))
+        self.assertGreaterEqual(color.contrast(label, chip), 4.5)
+
+    def test_a_light_chip_never_gets_a_light_label(self):
+        tokens = self.build_with("light", on_secondary_container="#f2f4f8")
+        chip, label = self.chip_and_label(tokens)
+        self.assertLess(color.luminance(label), color.luminance(chip))
+        self.assertGreaterEqual(color.contrast(label, chip), 4.5)
+
+
 if __name__ == "__main__":
     unittest.main()
