@@ -94,7 +94,7 @@ Item {
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: -1
                     text: root.word
-                    color: root.hot ? mt.danger : (mt.dark ? mt.accentMint : mt.colBorder)
+                    color: root.hot ? mt.danger : (mt.dark ? mt.accentMint : mt.chipInk)
                     font.family: mt.fontFamily
                     font.pixelSize: 12
                     font.weight: Font.ExtraBold

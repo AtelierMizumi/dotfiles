@@ -136,7 +136,7 @@ def build(grid: analysis.Grid, generate: Generator, overrides: dict | None, mode
         on_accent = _best_bw([accent])
 
     outline = _q(_with_lightness(rgb["surface_container_lowest"], 12.0)) if dark else _q(rgb["on_surface"])
-    line_role = rgb["outline"] if dark else rgb["outline_variant"]
+    line_role = _mix(rgb["outline"], rgb["primary"], 0.25) if dark else rgb["outline_variant"]
     line = _fit_against(line_role, backdrops, _NON_TEXT, direction, ink)
     shadow = _q(_mix(outline, rgb["scrim"], 0.5)) if dark else _q(_mix(outline, BLACK, 0.3))
     danger = _fit_against(rgb["error"], backdrops, _NON_TEXT, direction, ink)
@@ -144,10 +144,16 @@ def build(grid: analysis.Grid, generate: Generator, overrides: dict | None, mode
     series = [accent] + [_fit_against(rgb[role], backdrops, _NON_TEXT, direction, ink)
                          for role in ("secondary", "tertiary")] + [danger, accent2]
     chip = _q(rgb["secondary_container"])
+    if dark:
+        L_ch, C_ch, h_ch = color.to_lch(chip)
+        if C_ch > 28.0:
+            chip = _q(color.clip(color.from_lch_unclipped(min(34.0, max(22.0, L_ch)), 24.0, h_ch)))
     on_chip = _q(rgb["on_secondary_container"])
-    if color.contrast(on_chip, chip) < _TEXT:
+    chip_dark = color.luminance(chip) < 0.35
+    on_chip_dark = color.luminance(on_chip) < 0.35
+    if color.contrast(on_chip, chip) < _TEXT or (chip_dark and on_chip_dark) or (not chip_dark and not on_chip_dark):
         on_chip = _best_bw([chip])
-    ring = _q(_with_lightness(rgb["on_surface"], 92.0)) if dark else _q(rgb["surface_container_lowest"])
+    ring = _q(_mix(rgb["surface_bright"], accent, 0.30)) if dark else _q(rgb["surface_container_lowest"])
 
     def hexed(value: Rgb) -> str:
         return color.rgb_to_hex(value)

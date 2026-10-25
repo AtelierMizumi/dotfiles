@@ -305,7 +305,7 @@ Pill {
                     elide: Text.ElideRight
                     visible: root.active && root.artist !== "" && !root.capsule
                     text: root.artist
-                    color: mt.colSubText
+                    color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.72)
                     font.family: mt.fontFamily
                     font.pixelSize: root.artistSize
                     font.weight: Font.Medium

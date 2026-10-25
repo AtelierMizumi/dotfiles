@@ -658,7 +658,7 @@ Item {
                     // (Capsule: one line, the app; the title is in the media / window popups.)
                     visible: activeWindow.line2 !== "" && !status_Bar.capsule
                     text: activeWindow.line2.replace(/\s+/g, " ")
-                    color: mt.colSubText
+                    color: Qt.rgba(mt.colBorder.r, mt.colBorder.g, mt.colBorder.b, 0.72)
                     font.family: mt.fontFamily
                     font.pixelSize: mt.fontSizeSub
                     font.weight: Font.Medium

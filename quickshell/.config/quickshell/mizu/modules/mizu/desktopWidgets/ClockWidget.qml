@@ -582,7 +582,7 @@ PanelWindow {
         id: sc
 
         property string label: "00"
-        property color ink: mt.colBorder
+        property color ink: mt.chipInk
 
         width: 56
         height: 30

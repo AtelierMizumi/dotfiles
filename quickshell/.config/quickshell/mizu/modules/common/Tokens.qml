@@ -28,7 +28,7 @@ Singleton {
         color: {
             accent: "#7aa7ff", accent2: "#b79cff", outline: "#0f1114", line: "#6b7280", shadow: "#07080a",
             surface: "#1c1f24", surfaceHover: "#262a30", surfaceDivider: "#3a3f47", surfaceRing: "#33373e",
-            ring: "#e3e6ea", ink: "#e3e6ea", inkMuted: "#b4bac2", onAccent: "#0b1b3a", chip: "#2c3a52",
+            ring: "#485978", ink: "#e3e6ea", inkMuted: "#b4bac2", onAccent: "#0b1b3a", chip: "#2c3a52",
             onChip: "#d3e0f7", scrim: "#000000", hoverTint: "#232c3d", paper: "#181b1f", danger: "#ff6b7a",
             warning: "#e0b252", series: ["#7aa7ff", "#9aa5b8", "#b79cff", "#ff6b7a", "#b79cff"]
         },
