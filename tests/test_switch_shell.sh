@@ -9,6 +9,9 @@ SCRIPT="$ROOT/scripts/switch-shell.sh"
 passed=0
 failed=0
 
+# The tests may run from a worktree; the script refuses those unless told otherwise (see t_refuses_to_stow_from_a_worktree).
+export MIZU_ALLOW_WORKTREE=1
+
 fail() {
   echo "    assertion failed: $*" >&2
   exit 1
@@ -59,9 +62,12 @@ EOF
   cat >"$TMP/bin/git" <<EOF
 #!/usr/bin/env bash
 echo "git: \$*" >>"$LOG"
-if [[ "\$1" == "rev-parse" ]]; then
-  echo "smart-shell"
+if [[ "\$*" == *"--abbrev-ref"* ]]; then
+  echo "\${FAKE_BRANCH:-smart-shell}"
   exit 0
+fi
+if [[ "\$*" == *"merge"* ]]; then
+  exit \${FAKE_MERGE_RC:-0}
 fi
 exit 0
 EOF
@@ -156,11 +162,72 @@ t_confirm_yes_keeps_mizu() {
   [[ "$(cat "$TMP/config/niri/shell")" == "mizu" ]] || fail "shell was not switched to mizu"
 }
 
+t_installs_the_packages_the_shell_runs_tools_from() {
+  setup_sandbox
+  trap 'rm -rf "$TMP"' EXIT
+
+  PATH="$TMP/bin:$PATH" HOME="$TMP" XDG_CONFIG_HOME="$TMP/config" \
+    bash "$SCRIPT" --yes >/dev/null 2>&1 || fail "switch failed"
+
+  # wlsunset is the Night Light tile's backend; cliphist and brightnessctl are the clipboard and brightness ones.
+  for package in wlsunset cliphist brightnessctl; do
+    grep -q "^pacman: -S --needed --noconfirm .*\\b$package\\b" "$LOG" || fail "$package is not installed by the switch"
+  done
+}
+
+t_main_checkout_merges_smart_shell_before_stowing() {
+  setup_sandbox
+  trap 'rm -rf "$TMP"' EXIT
+
+  FAKE_BRANCH=main PATH="$TMP/bin:$PATH" HOME="$TMP" XDG_CONFIG_HOME="$TMP/config" \
+    bash "$SCRIPT" --yes >/dev/null 2>&1 || fail "switch failed"
+
+  grep -q 'git: .*merge --ff-only smart-shell' "$LOG" || fail "smart-shell was not merged into main"
+  local merge_line stow_line
+  merge_line=$(grep -n 'merge --ff-only smart-shell' "$LOG" | head -1 | cut -d: -f1)
+  stow_line=$(grep -n '^stow:' "$LOG" | head -1 | cut -d: -f1)
+  [[ -n "$stow_line" && "$merge_line" -lt "$stow_line" ]] || fail "the merge must come before stow"
+}
+
+t_failed_merge_stops_before_stow_and_switch() {
+  setup_sandbox
+  trap 'rm -rf "$TMP"' EXIT
+
+  if FAKE_BRANCH=main FAKE_MERGE_RC=1 PATH="$TMP/bin:$PATH" HOME="$TMP" XDG_CONFIG_HOME="$TMP/config" \
+     bash "$SCRIPT" --yes >/dev/null 2>&1; then
+    fail "a merge that cannot fast-forward must stop the switch"
+  fi
+
+  ! grep -q '^stow:' "$LOG" || fail "stow ran after a failed merge"
+  [[ ! -f "$TMP/config/niri/shell" ]] || fail "the shell was switched after a failed merge"
+}
+
+t_refuses_to_stow_from_a_worktree() {
+  setup_sandbox
+  trap 'rm -rf "$TMP"' EXIT
+
+  local fake_root="$TMP/dotfiles/.claude/worktrees/w"
+  mkdir -p "$fake_root/scripts"
+  cp "$SCRIPT" "$fake_root/scripts/switch-shell.sh"
+
+  if env -u MIZU_ALLOW_WORKTREE PATH="$TMP/bin:$PATH" HOME="$TMP" XDG_CONFIG_HOME="$TMP/config" \
+     bash "$fake_root/scripts/switch-shell.sh" --yes >/dev/null 2>&1; then
+    fail "running from a worktree must be refused"
+  fi
+
+  ! grep -q '^stow:' "$LOG" || fail "stow ran from a worktree"
+  ! grep -q 'sudo:' "$LOG" || fail "sudo ran from a worktree"
+}
+
 run_test t_dry_run_runs_no_mutating_commands
 run_test t_conflicting_package_aborts_before_sudo
 run_test t_rollback_works_without_quickshell_and_keeps_settings
 run_test t_confirm_timeout_reverts_to_noctalia
 run_test t_confirm_yes_keeps_mizu
+run_test t_installs_the_packages_the_shell_runs_tools_from
+run_test t_main_checkout_merges_smart_shell_before_stowing
+run_test t_failed_merge_stops_before_stow_and_switch
+run_test t_refuses_to_stow_from_a_worktree
 
 echo "RESULT passed=$passed failed=$failed skipped=0"
 [[ $failed -eq 0 ]]

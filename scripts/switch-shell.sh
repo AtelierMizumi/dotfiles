@@ -78,8 +78,17 @@ if [[ $rollback -eq 1 ]]; then
   exit 0
 fi
 
+# --- Preflight: the main checkout only ---
+# Stow links ~/.config into the checkout it runs from: from a worktree under .claude/worktrees/ the live config would
+# point at a directory that goes away with the worktree. (MIZU_ALLOW_WORKTREE=1 is for the tests, which run the script
+# from wherever the repo is checked out.)
+if [[ "$ROOT" == */.claude/worktrees/* && "${MIZU_ALLOW_WORKTREE:-0}" != "1" ]]; then
+  echo "ERROR: run this from the main checkout, not from a worktree ($ROOT)." >&2
+  exit 1
+fi
+
 # --- Preflight Package Conflicts Check ---
-packages_needed=(brightnessctl cliphist)
+packages_needed=(brightnessctl cliphist wlsunset)
 if [[ -n "${MIZU_EXTRA_PACKAGES:-}" ]]; then
   # shellcheck disable=SC2206
   packages_needed+=($MIZU_EXTRA_PACKAGES)
@@ -119,16 +128,15 @@ if command -v pacman >/dev/null 2>&1; then
   fi
 fi
 
-# --- Merge smart-shell into main (if on smart-shell branch) ---
+# --- Merge smart-shell into main ---
+# Fast-forward only: a smart-shell that has diverged from main stops the switch before anything is stowed.
 if command -v git >/dev/null 2>&1; then
   current_branch=$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-  if [[ "$current_branch" == "smart-shell" ]]; then
-    echo "==> Merging branch smart-shell into main..."
-    # If we are in the main worktree on smart-shell, switch and merge
-    # If in a linked worktree, ensure commits are on main
-    main_dir="$(git rev-parse --git-common-dir 2>/dev/null || echo "")"
-    if [[ -n "$main_dir" ]]; then
-      git -C "$ROOT" merge --ff-only smart-shell 2>/dev/null || true
+  if [[ "$current_branch" == "main" ]] && git -C "$ROOT" rev-parse --verify --quiet smart-shell >/dev/null 2>&1; then
+    echo "==> Merging branch smart-shell into main (fast-forward only)..."
+    if ! git -C "$ROOT" merge --ff-only smart-shell; then
+      echo "ERROR: smart-shell cannot be fast-forwarded into main; nothing was stowed or switched." >&2
+      exit 1
     fi
   fi
 fi
