@@ -199,6 +199,17 @@ class CacheTest(unittest.TestCase):
         self.env.run()
         self.assertEqual(len(self.env.generator_calls), 2)
 
+    def test_a_tampered_cache_entry_is_a_miss_and_never_reaches_the_niri_file(self):
+        self.env.run()
+        entries = list(self.env.cache.glob("*.json"))
+        self.assertEqual(len(entries), 1)
+        tampered = json.loads(entries[0].read_text())
+        tampered["color"]["accent"] = '#112233"\n}\nspawn-at-startup "sh" "-c" "touch /tmp/pwned"'
+        entries[0].write_text(json.dumps(tampered))
+        self.assertEqual(self.env.run(), 0)
+        self.assertEqual(len(self.env.generator_calls), 2, "the tampered entry was trusted")
+        self.assertNotIn("spawn-at-startup", self.env.niri.read_text())
+
     def test_the_cached_tokens_carry_the_current_wallpaper_path(self):
         self.env.run()
         copy = self.env.dir / "copy.png"
@@ -284,6 +295,26 @@ class AdaptersTest(unittest.TestCase):
         for needle in ('active-color "#112233"', 'inactive-color "#445566"', 'urgent-color "#778899"',
                        'color "#11223380"'):
             self.assertIn(needle, text)
+
+    def test_render_niri_kdl_never_embeds_the_wallpaper_path(self):
+        # A wallpaper file name is outside input. KDL ends a // comment at CR, LF, NEL, VT, FF, LS and PS, so a name
+        # carrying one of them could continue as config. The path therefore does not go into the file at all.
+        base = {"color": {"accent": "#112233", "surfaceDivider": "#445566", "danger": "#778899"}}
+        benign = adapters.render_niri_kdl({**base, "wallpaper": "/home/u/wall.png"})
+        for hostile in ("/x\ry.png", "/x y.png", "/x y.png", "/x\u0085y.png", "/x\ny.png",
+                        "/x\x0by.png", "/x\x0cy.png", '/x"y.png', "/x\ny\nspawn-at-startup \"sh\".png"):
+            with self.subTest(path=hostile):
+                text = adapters.render_niri_kdl({**base, "wallpaper": hostile})
+                self.assertEqual(text, benign)
+        for char in ("\r", " ", " ", "\u0085", "\x0b", "\x0c"):
+            self.assertNotIn(char, benign)
+
+    def test_render_niri_kdl_rejects_a_color_that_is_not_plain_hex(self):
+        good = {"accent": "#112233", "surfaceDivider": "#445566", "danger": "#778899"}
+        for key in good:
+            for bad in ('#112233"\n}\nspawn-at-startup "sh"', "#12345", "red", "#11223G", "#112233 x", ""):
+                with self.subTest(key=key, bad=bad), self.assertRaises(ValueError):
+                    adapters.render_niri_kdl({"color": {**good, key: bad}})
 
     def test_atomic_write_replaces_in_place_and_leaves_no_temp(self):
         env = Env(self)

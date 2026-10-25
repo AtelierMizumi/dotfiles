@@ -106,6 +106,9 @@ def main(argv, grid_reader=None, generator_factory=None, out=None) -> int:
         tokens = json.loads(cache_file.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         tokens = None
+    if tokens is not None and not (isinstance(tokens, dict) and tokens.get("schema") == build.SCHEMA
+                                   and adapters.niri_colors_ok(tokens)):
+        tokens = None  # an entry that was edited or written by another version is a miss, never trusted
 
     if tokens is None:
         try:

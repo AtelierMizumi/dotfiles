@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -67,12 +68,33 @@ def noctalia_generator(path: str | os.PathLike):
     return generate
 
 
+_HEX = re.compile(r"[0-9a-f]{6}")
+_NIRI_COLOR_KEYS = ("accent", "surfaceDivider", "danger")
+
+
+def _plain_hex(value) -> bool:
+    return isinstance(value, str) and len(value) == 7 and value[0] == "#" and bool(_HEX.fullmatch(value[1:]))
+
+
+def niri_colors_ok(tokens) -> bool:
+    """True when the three colors the niri file uses are plain #rrggbb strings (a cache entry could be edited)."""
+    try:
+        return all(_plain_hex(tokens["color"][key]) for key in _NIRI_COLOR_KEYS)
+    except (KeyError, TypeError):
+        return False
+
+
 def render_niri_kdl(tokens: dict) -> str:
-    """The focus ring and insert hint, for `include optional=true "colors.kdl"` in niri's config."""
+    """The focus ring and insert hint, for `include optional=true "colors.kdl"` in niri's config.
+
+    The file holds nothing but fixed text and three validated hex colors. The wallpaper path is left out on purpose:
+    file names are outside input, and KDL ends a // comment at CR, LF, NEL, VT, FF, LS and PS.
+    """
+    if not niri_colors_ok(tokens):
+        raise ValueError("the tokens hold a color that is not plain #rrggbb")
     colors = tokens["color"]
-    source = str(tokens.get("wallpaper", "")).replace("\n", " ")
     return (
-        f"// Rendered by mizu_palette.py from {source}. The next wallpaper change rewrites this file.\n"
+        "// Rendered by mizu_palette.py. The next wallpaper change rewrites this file.\n"
         "layout {\n"
         "    focus-ring {\n"
         f'        active-color "{colors["accent"]}"\n'
