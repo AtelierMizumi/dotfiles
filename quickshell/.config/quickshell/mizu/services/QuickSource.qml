@@ -1413,15 +1413,19 @@ Scope {
     // saved by toggleKeepAwake(), and on every load the script below first
     // kills any leftover inhibitor, then — if the saved choice was ON —
     // starts a fresh one. Either way the tile shows what's really running.
-    // The "mizu-keep-awake" comment in the command is the marker the
-    // script finds leftovers by; keep the two in step.
+    // The "mizu-keep-awake <runtime dir>" comment in the command is the marker the
+    // script finds leftovers by (so a second shell never ends this one's); keep the
+    // two in step. setpriv makes the inhibitor die with the shell: without it a
+    // quit left the lock held and idle blocked until the next start.
     readonly property string keepAwakeScript: Directories.script("state/keep-awake-state.sh")
+    readonly property string runtimeDir: Quickshell.env("MIZU_RUNTIME_DIR")
+        || ((Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/mizu")
 
     Process {
         id: inhibitor
-        command: ["systemd-inhibit", "--what=idle", "--who=mizu",
+        command: ["setpriv", "--pdeathsig", "TERM", "systemd-inhibit", "--what=idle", "--who=mizu",
                   "--why=Keep Awake (Quick Panel)", "--mode=block",
-                  "sh", "-c", "while kill -0 $PPID 2>/dev/null; do sleep 5; done # mizu-keep-awake"]
+                  "sh", "-c", "while kill -0 $PPID 2>/dev/null; do sleep 5; done # mizu-keep-awake " + root.runtimeDir]
     }
 
     readonly property string tilesScript: Directories.script("state/qp-tiles-state.sh")

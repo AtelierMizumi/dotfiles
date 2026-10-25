@@ -105,6 +105,35 @@ t_nested_config_validates_and_cannot_quit_the_real_session() {
   [[ "$out" == *"config is valid"* ]] || fail "no 'config is valid': $out"
 }
 
+t_runs_the_system_quickshell_when_nothing_is_staged() {
+  setup
+  mkdir -p "$STATE/bin" "$STATE/empty-stage"
+  printf '#!/bin/sh\nexit 0\n' >"$STATE/bin/quickshell"
+  printf '#!/bin/sh\necho "$*" >"%s/dbus.args"\n' "$STATE" >"$STATE/bin/dbus-run-session"
+  chmod +x "$STATE/bin/quickshell" "$STATE/bin/dbus-run-session"
+
+  RICE_STAGE="$STATE/empty-stage" PATH="$STATE/bin:$PATH" MIZU_DEV_STATE="$STATE" "$HARNESS" _qs -p somewhere \
+    >/dev/null 2>"$STATE.err" || fail "the harness refused to run without a staged quickshell: $(cat "$STATE.err")"
+
+  [[ "$(cat "$STATE/dbus.args")" == "-- $STATE/bin/quickshell -p somewhere" ]] ||
+    fail "quickshell was not run from the system path: $(cat "$STATE/dbus.args")"
+}
+
+t_a_staged_quickshell_still_wins_over_the_system_one() {
+  setup
+  mkdir -p "$STATE/bin" "$STATE/stage/root/usr/bin"
+  printf '#!/bin/sh\nexit 0\n' >"$STATE/bin/quickshell"
+  printf '#!/bin/sh\nexit 0\n' >"$STATE/stage/root/usr/bin/quickshell"
+  printf '#!/bin/sh\necho "$*" >"%s/dbus.args"\n' "$STATE" >"$STATE/bin/dbus-run-session"
+  chmod +x "$STATE/bin/quickshell" "$STATE/stage/root/usr/bin/quickshell" "$STATE/bin/dbus-run-session"
+
+  RICE_STAGE="$STATE/stage" PATH="$STATE/bin:$PATH" MIZU_DEV_STATE="$STATE" "$HARNESS" _qs -p somewhere \
+    >/dev/null 2>"$STATE.err" || fail "the harness failed with a staged quickshell: $(cat "$STATE.err")"
+
+  [[ "$(cat "$STATE/dbus.args")" == "-- $STATE/stage/root/usr/bin/quickshell -p somewhere" ]] ||
+    fail "the staged quickshell was not used: $(cat "$STATE/dbus.args")"
+}
+
 passed=0
 failed=0
 skipped=0

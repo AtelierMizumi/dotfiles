@@ -174,7 +174,62 @@ t_unknown_action_fails() {
     || fail "unknown action should exit non-zero"
 }
 
+# A fake `qs` that exits with the next code of $TMP/codes (one per line; 0 when the list is used up) and logs each run.
+fake_qs_with_exit_codes() {
+  printf '%s\n' "$@" >"$TMP/codes"
+  cat >"$TMP/bin/qs" <<EOF
+#!/usr/bin/env bash
+echo "qs run" >>"$LOG"
+code=\$(head -n 1 "$TMP/codes" 2>/dev/null)
+sed -i 1d "$TMP/codes"
+exit \${code:-0}
+EOF
+  chmod +x "$TMP/bin/qs"
+}
+
+run_shell_start() {
+  PATH="$TMP/bin:$PATH" HOME="$TMP" XDG_CONFIG_HOME="$TMP/config" MIZU_RESTART_DELAY=0 bash "$SHELL_START"
+}
+
+t_shell_start_restarts_mizu_after_a_crash() {
+  setup_env
+  trap 'rm -rf "$TMP"' EXIT
+  echo mizu >"$TMP/config/niri/shell"
+  fake_qs_with_exit_codes 139 1 0
+
+  run_shell_start || fail "shell-start failed although the third run exited cleanly"
+
+  [[ $(grep -c 'qs run' "$LOG") -eq 3 ]] || fail "expected 3 runs (2 crashes, then a clean exit), got $(grep -c 'qs run' "$LOG")"
+}
+
+t_shell_start_does_not_restart_after_a_clean_exit() {
+  setup_env
+  trap 'rm -rf "$TMP"' EXIT
+  echo mizu >"$TMP/config/niri/shell"
+  fake_qs_with_exit_codes 0
+
+  run_shell_start || fail "shell-start failed after a clean exit"
+
+  [[ $(grep -c 'qs run' "$LOG") -eq 1 ]] || fail "a clean exit must not restart the shell"
+}
+
+t_shell_start_gives_up_on_a_crash_loop() {
+  setup_env
+  trap 'rm -rf "$TMP"' EXIT
+  echo mizu >"$TMP/config/niri/shell"
+  fake_qs_with_exit_codes 1 1 1 1 1 1 1 1 1 1
+
+  if run_shell_start; then
+    fail "a shell that crashes at once every time must make shell-start fail"
+  fi
+
+  [[ $(grep -c 'qs run' "$LOG") -eq 5 ]] || fail "expected 5 tries before giving up, got $(grep -c 'qs run' "$LOG")"
+}
+
 run_test t_scripts_exist_and_are_executable
+run_test t_shell_start_restarts_mizu_after_a_crash
+run_test t_shell_start_does_not_restart_after_a_clean_exit
+run_test t_shell_start_gives_up_on_a_crash_loop
 run_test t_shell_start_defaults_to_noctalia
 run_test t_shell_start_runs_mizu_when_configured
 run_test t_shell_ipc_dispatches_noctalia

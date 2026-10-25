@@ -29,6 +29,8 @@ ALLOWED_PROGRAMS = {
     "sh", "bash", "env", "notify-send", "qs", "niri", "xdg-open", "wpctl", "pactl", "curl", "bluetoothctl", "nmcli",
     "mkdir", "uname", "cat", "ddcutil", "brightnessctl", "wlsunset", "cliphist", "wl-copy", "wl-paste",
     "systemd-inhibit", "systemctl", "loginctl", "python3", "pkill", "setsid", "nice", "magick", "busctl",
+    # setpriv only sets PR_SET_PDEATHSIG, so a helper (the Keep Awake inhibitor) dies with the shell; no new rights.
+    "setpriv",
 }
 
 # Modules, services and scripts of the upstream tree that milestone 1 does not carry (spec section 5).

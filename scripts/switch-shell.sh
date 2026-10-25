@@ -6,7 +6,6 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 NIRI_SHELL_FILE="$CONFIG_HOME/niri/shell"
-STAGING_DIR="${RICE_STAGE:-$HOME/.cache/rice-staging}"
 
 dry_run=0
 rollback=0
@@ -43,6 +42,9 @@ reload_session() {
   if command -v niri >/dev/null 2>&1; then
     niri msg action load-config-file >/dev/null 2>&1 || true
   fi
+  # shell-start restarts a shell that dies with an error, so it goes first: it stops its shell and exits. The pattern
+  # is the supervisor's own command line (bash <path>/scripts/shell-start), not any process that mentions the file.
+  pkill -f '^(/usr/bin/|/bin/)?bash [^ ]*/scripts/shell-start$' >/dev/null 2>&1 || true
   if [[ "$target_shell" == "noctalia" ]]; then
     pkill -x quickshell >/dev/null 2>&1 || true
     pkill -x qs >/dev/null 2>&1 || true
@@ -88,7 +90,9 @@ if [[ "$ROOT" == */.claude/worktrees/* && "${MIZU_ALLOW_WORKTREE:-0}" != "1" ]];
 fi
 
 # --- Preflight Package Conflicts Check ---
-packages_needed=(brightnessctl cliphist wlsunset)
+# quickshell runs the shell, the font draws its icons, wlsunset is Night Light, cliphist the clipboard history and
+# brightnessctl the brightness keys. All five are in the Arch repos (extra).
+packages_needed=(quickshell ttf-material-symbols-variable brightnessctl cliphist wlsunset)
 if [[ -n "${MIZU_EXTRA_PACKAGES:-}" ]]; then
   # shellcheck disable=SC2206
   packages_needed+=($MIZU_EXTRA_PACKAGES)
@@ -106,9 +110,6 @@ fi
 if [[ $dry_run -eq 1 ]]; then
   echo "==> [dry-run] Preflight checks passed."
   echo "==> [dry-run] Would install packages: ${packages_needed[*]}"
-  if [[ -d "$STAGING_DIR/pkgs" ]]; then
-    echo "==> [dry-run] Would install local staged packages from $STAGING_DIR/pkgs"
-  fi
   echo "==> [dry-run] Would merge branch smart-shell into main"
   echo "==> [dry-run] Would run: stow --no-folding -t \"$HOME\" quickshell niri"
   echo "==> [dry-run] Would write 'mizu' to $NIRI_SHELL_FILE"
@@ -121,11 +122,6 @@ fi
 echo "==> Installing required packages..."
 if command -v pacman >/dev/null 2>&1; then
   sudo pacman -S --needed --noconfirm "${packages_needed[@]}"
-  if compgen -G "$STAGING_DIR/pkgs/*.pkg.tar.zst" >/dev/null; then
-    echo "==> Installing staged quickshell packages..."
-    # shellcheck disable=SC2046
-    sudo pacman -U --needed --noconfirm $(compgen -G "$STAGING_DIR/pkgs/*.pkg.tar.zst")
-  fi
 fi
 
 # --- Merge smart-shell into main ---

@@ -49,20 +49,36 @@ require_session() {
   printf '%s\n' "$socket"
 }
 
-# Private HOME and D-Bus, then the staged quickshell. Called by the nested niri, not by people.
+# The quickshell to run: the one staged by stage-quickshell.sh when there is one (a way to test before installing
+# anything), otherwise the installed one.
+qs_binary() {
+  if [[ -x "$STAGE/root/usr/bin/quickshell" ]]; then
+    echo "$STAGE/root/usr/bin/quickshell"
+  else
+    command -v quickshell || true
+  fi
+}
+
+# Private HOME and D-Bus, then quickshell. Called by the nested niri, not by people.
 run_qs() {
-  local sandbox="$STATE/sandbox-home" font
+  local sandbox="$STATE/sandbox-home" font qs_bin
+  qs_bin=$(qs_binary)
+  [[ -n "$qs_bin" ]] || die "no quickshell: install it (pacman -S quickshell) or stage it with scripts/dev/stage-quickshell.sh"
   mkdir -p "$sandbox/.config" "$sandbox/.local/state" "$sandbox/.local/share/fonts" "$sandbox/.cache"
   for font in "$STAGE"/root/usr/share/fonts/*/*aterial*ymbols*Rounded*; do
     [[ -f "$font" ]] && cp -n "$font" "$sandbox/.local/share/fonts/"
   done
-  [[ -x "$STAGE/root/usr/bin/quickshell" ]] || die "no staged quickshell in $STAGE (run scripts/dev/stage-quickshell.sh)"
   export HOME="$sandbox" XDG_CONFIG_HOME="$sandbox/.config" XDG_STATE_HOME="$sandbox/.local/state" \
     XDG_DATA_HOME="$sandbox/.local/share" XDG_CACHE_HOME="$sandbox/.cache"
-  export LD_LIBRARY_PATH="$STAGE/root/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-  export QML_IMPORT_PATH="$STAGE/root/usr/lib/qt6/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
-  export QML2_IMPORT_PATH="$QML_IMPORT_PATH"
-  exec dbus-run-session -- "$STAGE/root/usr/bin/quickshell" "$@"
+  # The shell keeps small runtime state (Keep Awake) in a tmpfs dir: its own, not the real session's.
+  mkdir -p "$STATE/runtime"
+  export MIZU_RUNTIME_DIR="$STATE/runtime"
+  if [[ "$qs_bin" == "$STAGE/root/usr/bin/quickshell" ]]; then
+    export LD_LIBRARY_PATH="$STAGE/root/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export QML_IMPORT_PATH="$STAGE/root/usr/lib/qt6/qml${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
+    export QML2_IMPORT_PATH="$QML_IMPORT_PATH"
+  fi
+  exec dbus-run-session -- "$qs_bin" "$@"
 }
 
 start() {
@@ -124,7 +140,7 @@ case "${1:-}" in
     shell_dir=$(cat "$STATE/shell_dir")
     # After a hot reload Quickshell 0.3.2 no longer lists the instance under its shell path, so `-p <dir> ipc` finds
     # "no running instances"; the process id still works.
-    shell_pid=$(pgrep -n -f "^$STAGE/root/usr/bin/quickshell -p $shell_dir\$") || die "the shell is not running (see: nested-shell.sh log)"
+    shell_pid=$(pgrep -n -f "^$(qs_binary) -p $shell_dir\$") || die "the shell is not running (see: nested-shell.sh log)"
     MIZU_DEV_STATE="$STATE" run_qs ipc --pid "$shell_pid" "$@"
     ;;
   run)

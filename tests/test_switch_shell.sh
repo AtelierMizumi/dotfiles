@@ -89,6 +89,14 @@ exit 0
 EOF
   chmod +x "$TMP/bin/niri"
 
+  # Fake pkill: the tests must never signal the real shell of whoever runs them
+  cat >"$TMP/bin/pkill" <<EOF
+#!/usr/bin/env bash
+echo "pkill: \$*" >>"$LOG"
+exit 0
+EOF
+  chmod +x "$TMP/bin/pkill"
+
   # Fake noctalia
   cat >"$TMP/bin/noctalia" <<EOF
 #!/usr/bin/env bash
@@ -162,6 +170,23 @@ t_confirm_yes_keeps_mizu() {
   [[ "$(cat "$TMP/config/niri/shell")" == "mizu" ]] || fail "shell was not switched to mizu"
 }
 
+t_the_shell_supervisor_is_stopped_before_the_shell_on_every_switch() {
+  local args first_pkill
+  for args in "--yes" "--rollback"; do
+    setup_sandbox
+    trap 'rm -rf "$TMP"' EXIT
+
+    PATH="$TMP/bin:$PATH" HOME="$TMP" XDG_CONFIG_HOME="$TMP/config" bash "$SCRIPT" $args >/dev/null 2>&1 ||
+      fail "$args failed"
+
+    first_pkill=$(grep '^pkill:' "$LOG" | head -1)
+    [[ "$first_pkill" == *"scripts/shell-start"* ]] ||
+      fail "$args: the first pkill must stop the shell-start supervisor, got: $first_pkill"
+    grep -q '^pkill: .*-x quickshell' "$LOG" || [[ "$args" == "--rollback" ]] || fail "$args: quickshell was not stopped"
+    rm -rf "$TMP"
+  done
+}
+
 t_installs_the_packages_the_shell_runs_tools_from() {
   setup_sandbox
   trap 'rm -rf "$TMP"' EXIT
@@ -170,9 +195,22 @@ t_installs_the_packages_the_shell_runs_tools_from() {
     bash "$SCRIPT" --yes >/dev/null 2>&1 || fail "switch failed"
 
   # wlsunset is the Night Light tile's backend; cliphist and brightnessctl are the clipboard and brightness ones.
-  for package in wlsunset cliphist brightnessctl; do
+  for package in quickshell ttf-material-symbols-variable wlsunset cliphist brightnessctl; do
     grep -q "^pacman: -S --needed --noconfirm .*\\b$package\\b" "$LOG" || fail "$package is not installed by the switch"
   done
+}
+
+t_never_installs_leftover_staged_packages_over_the_repo_ones() {
+  setup_sandbox
+  trap 'rm -rf "$TMP"' EXIT
+
+  mkdir -p "$TMP/stage/pkgs"
+  : >"$TMP/stage/pkgs/quickshell-0.0.1-1-x86_64.pkg.tar.zst"
+
+  RICE_STAGE="$TMP/stage" PATH="$TMP/bin:$PATH" HOME="$TMP" XDG_CONFIG_HOME="$TMP/config" \
+    bash "$SCRIPT" --yes >/dev/null 2>&1 || fail "switch failed"
+
+  ! grep -q '^pacman: -U' "$LOG" || fail "a leftover staged package was installed with pacman -U"
 }
 
 t_main_checkout_merges_smart_shell_before_stowing() {
@@ -224,7 +262,9 @@ run_test t_conflicting_package_aborts_before_sudo
 run_test t_rollback_works_without_quickshell_and_keeps_settings
 run_test t_confirm_timeout_reverts_to_noctalia
 run_test t_confirm_yes_keeps_mizu
+run_test t_the_shell_supervisor_is_stopped_before_the_shell_on_every_switch
 run_test t_installs_the_packages_the_shell_runs_tools_from
+run_test t_never_installs_leftover_staged_packages_over_the_repo_ones
 run_test t_main_checkout_merges_smart_shell_before_stowing
 run_test t_failed_merge_stops_before_stow_and_switch
 run_test t_refuses_to_stow_from_a_worktree

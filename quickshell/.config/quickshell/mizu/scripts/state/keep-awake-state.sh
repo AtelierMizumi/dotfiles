@@ -9,13 +9,15 @@
 #                                  nothing at all)
 #   keep-awake-state.sh save on|off
 #
-# Lives in ${XDG_RUNTIME_DIR:-/tmp}/sekaipop/keep-awake — the runtime dir
-# (tmpfs), not ~/.local/state, on purpose: a reload keeps it, but logging
-# out or rebooting wipes it, so Keep Awake never silently comes back ON in
-# a fresh session. Written to a temp file and moved into place.
+# Lives in ${MIZU_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/tmp}/mizu}/keep-awake — the
+# runtime dir (tmpfs), not ~/.local/state, on purpose: a reload keeps it, but
+# logging out or rebooting wipes it, so Keep Awake never silently comes back ON
+# in a fresh session. Written to a temp file and moved into place.
+# MIZU_RUNTIME_DIR lets a second shell (the nested test session) keep its own
+# state; the leftover cleanup only touches inhibitors marked with this dir.
 
 mode="$1"
-dir="${XDG_RUNTIME_DIR:-/tmp}/mizu"
+dir="${MIZU_RUNTIME_DIR:-${XDG_RUNTIME_DIR:-/tmp}/mizu}"
 file="$dir/keep-awake"
 
 case "$mode" in
@@ -25,7 +27,7 @@ case "$mode" in
         # Keep Awake is off. Kill it; QuickSource starts a fresh one if
         # the saved state says ON. ([e] keeps this pattern from matching
         # a command line that merely contains the pattern's own text.)
-        pkill -f 'mizu-keep-awak[e]' 2>/dev/null
+        pkill -f "mizu-keep-awak[e] $dir\$" 2>/dev/null
         [ -f "$file" ] && cat "$file"
         exit 0
         ;;

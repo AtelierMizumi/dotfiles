@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
+# Starts the shell chosen in ~/.config/niri/shell (mizu, or noctalia when the file is missing or says anything else)
+# and keeps it running: a shell that dies with an error (a crash, the OOM killer) is started again after a second.
+# A clean exit (quit from the shell, `qs kill`) ends this script too. Five failures in a row, each within 30 s of
+# the start, mean it will not run: the script stops and says so, instead of looping at full speed.
+#
+# MIZU_RESTART_DELAY (seconds, default 1) and MIZU_STABLE_SECONDS (default 30) exist for the tests.
 set -euo pipefail
 
 config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 shell_choice_file="$config_home/niri/shell"
+max_failures=5
+restart_delay="${MIZU_RESTART_DELAY:-1}"
+stable_seconds="${MIZU_STABLE_SECONDS:-30}"
 
 shell="noctalia"
 if [[ -f "$shell_choice_file" ]]; then
@@ -14,10 +23,36 @@ fi
 
 if [[ "$shell" == "mizu" ]]; then
   if command -v qs >/dev/null 2>&1; then
-    exec env LC_TIME=ja_JP.UTF-8 qs -c mizu
+    command=(qs -c mizu)
   else
-    exec env LC_TIME=ja_JP.UTF-8 quickshell -c mizu
+    command=(quickshell -c mizu)
   fi
 else
-  exec env LC_TIME=ja_JP.UTF-8 noctalia
+  command=(noctalia)
 fi
+
+# LC_TIME is set for the shell process only, so the clock shows Japanese weekday names and Plasma is unaffected.
+child=0
+trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 0' TERM INT HUP
+
+failures=0
+while true; do
+  started=$SECONDS
+  env LC_TIME=ja_JP.UTF-8 "${command[@]}" &
+  child=$!
+  code=0
+  wait "$child" || code=$?
+  if [[ $code -eq 0 ]]; then
+    exit 0
+  fi
+  if (( SECONDS - started >= stable_seconds )); then
+    failures=0
+  fi
+  failures=$((failures + 1))
+  echo "shell-start: ${command[0]} exited with status $code (failure $failures of $max_failures)" >&2
+  if (( failures >= max_failures )); then
+    echo "shell-start: giving up; run '${command[*]}' in a terminal to see why it stops" >&2
+    exit 1
+  fi
+  sleep "$restart_delay"
+done
