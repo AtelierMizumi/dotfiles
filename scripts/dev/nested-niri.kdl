@@ -1,0 +1,25 @@
+// A niri that runs as a window of the current session, for scripts/dev/nested-shell.sh.
+// The harness exports NESTED_STATE, NESTED_HERE and NESTED_SHELL_DIR before starting it.
+input {
+    keyboard {
+        xkb {
+            layout "us"
+        }
+    }
+}
+layout {
+    gaps 12
+    focus-ring {
+        width 2
+    }
+}
+prefer-no-csd
+screenshot-path null
+hotkey-overlay {
+    skip-at-startup
+}
+// First line of $NESTED_STATE/env is the nested NIRI_SOCKET: the harness waits for it, then drives this session only.
+spawn-sh-at-startup "printenv NIRI_SOCKET WAYLAND_DISPLAY > \"$NESTED_STATE/env\"; exec bash \"$NESTED_HERE/nested-shell.sh\" _qs -p \"$NESTED_SHELL_DIR\" > \"$NESTED_STATE/qs.log\" 2>&1"
+binds {
+    Mod+Shift+E { quit skip-confirmation=true; }
+}
