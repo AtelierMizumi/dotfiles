@@ -385,6 +385,9 @@ const map = {
 }
 
 function candidates(name, filled, style) {
+    // The fork ships no SVG set: the "font" style draws every icon from the Material Symbols font, with no file tried.
+    if (style === "font")
+        return []
     let entry = map[name]
     if (entry === undefined)
         entry = String(name).replace(/_/g, "-")

@@ -190,7 +190,7 @@ QtObject {
     // outline, 1 = solid, iconWeight is the font's wght axis.
     readonly property string iconFont: "Material Symbols Rounded"
     readonly property real iconFill: 0
-    readonly property string iconStyle: "outline"
+    readonly property string iconStyle: "font"
     readonly property real iconWeight: 400
     // The Settings panel's icons are heavier, so their outlines hold up against the panel's thick borders.
     readonly property real settingsIconWeight: 600
