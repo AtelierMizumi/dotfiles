@@ -288,8 +288,10 @@ Item {
     // fonts, and the same ink rule. With the LCD wallpaper behind it the ink goes white
     // where the picture is dark and the usual navy where it is light (LauncherLcd.qml
     // measures it); without, it is the plain panel ink. No chip behind any of it.
-    readonly property color inkLeft: face.lcdOn ? (lcdLayer.darkLeft ? mt.textWhite : mt.colBorder) : mt.pInk
-    readonly property color inkRight: face.lcdOn ? (lcdLayer.darkRight ? mt.textWhite : mt.colBorder) : mt.pInk
+    readonly property color inkLeft: face.lcdOn && lcdLayer.sampled
+        ? (lcdLayer.darkLeft ? mt.onPicture : mt.colBorder) : mt.pInk
+    readonly property color inkRight: face.lcdOn && lcdLayer.sampled
+        ? (lcdLayer.darkRight ? mt.onPicture : mt.colBorder) : mt.pInk
 
     Column {
         x: 67
@@ -577,7 +579,7 @@ Item {
             anchors.centerIn: parent
             visible: face.searching && drawerGrid.count === 0 && extrasLayer.rows.length === 0
             text: "No apps match"
-            color: face.lcdOn ? mt.textWhite : mt.pInkSub
+            color: face.lcdOn ? mt.onPicture : mt.pInkSub
             style: face.lcdOn ? Text.Outline : Text.Normal
             styleColor: Qt.rgba(0.10, 0.10, 0.22, 0.85)
             font.family: mt.fontFamily
@@ -711,7 +713,7 @@ Item {
                 text: tile.modelData.name
                 // Over the wallpaper there is no chip to read on any more, so the name
                 // goes white with a thin dark edge; on the plain screen it is the usual ink.
-                color: face.lcdOn ? mt.textWhite : mt.pInk
+                color: face.lcdOn ? mt.onPicture : mt.pInk
                 style: face.lcdOn ? Text.Outline : Text.Normal
                 styleColor: Qt.rgba(0.10, 0.10, 0.22, 0.85)
                 font.family: mt.fontFamily

@@ -113,15 +113,15 @@ PanelWindow {
         property int unlocking: win.leaving ? 1 : 0
         // The theme's colours for the lockscreen (with matugen and a separate
         // lockscreen wallpaper: that wallpaper's), the same as WallpaperLayer.qml.
-        property color colorWhite: Tokens.textWhite
+        property color colorWhite: Tokens.onAccent
         property color colorPink: Tokens.accent
-        property color colorGreen: Tokens.accentMint
-        property color colorCyan: Tokens.accentCyan
+        property color colorGreen: Tokens.accent2
+        property color colorCyan: Tokens.accent
         Behavior on colorWhite { ColorAnimation { duration: 450 } }
         Behavior on colorPink { ColorAnimation { duration: 450 } }
         Behavior on colorGreen { ColorAnimation { duration: 450 } }
         Behavior on colorCyan { ColorAnimation { duration: 450 } }
-        property color accentColor: Tokens.accentCyan
+        property color accentColor: Tokens.accent
 
         // sekaiRing. `transitionStyle` is the ring's variant number (0 ring,
         // 1 petal, 2 echo, 3 swirl), as in WallpaperLayer.qml.

@@ -424,9 +424,9 @@ Item {
     property bool bannerDarkRight: false
     readonly property bool bannerHasImage: bannerImage.status === Image.Ready
     readonly property color bannerInkLeft: bannerHasImage
-        ? (bannerDarkLeft ? mt.textWhite : mt.colBorder) : mt.pInk
+        ? (bannerDarkLeft ? mt.onPicture : mt.colBorder) : mt.pInk
     readonly property color bannerInkRight: bannerHasImage
-        ? (bannerDarkRight ? mt.textWhite : mt.colBorder) : mt.pInk
+        ? (bannerDarkRight ? mt.onPicture : mt.colBorder) : mt.pInk
 
     // ===== banner =====
     Item {
@@ -488,7 +488,7 @@ Item {
             onImageLoaded: requestPaint()
 
             // Average brightness (0 black .. 1 white, in linear light) of a
-            // rectangle of the thumbnail.
+            // rectangle of the thumbnail, or -1 when the canvas holds no pixels there.
             function brightness(ctx, x, y, w, h) {
                 const d = ctx.getImageData(x, y, w, h).data
                 let sum = 0
@@ -502,7 +502,7 @@ Item {
                     sum += 0.2126 * r + 0.7152 * g + 0.0722 * b
                     n++
                 }
-                return n > 0 ? sum / n : 1
+                return n > 0 ? sum / n : -1
             }
 
             onPaint: {
@@ -524,8 +524,12 @@ Item {
                 // Under the clock + date: banner x 41..191, y 10..60.
                 // Under the speed readout: banner x 411..561, y 12..58.
                 // Below ~0.30 the picture is dark enough that white text wins.
-                face.bannerDarkLeft = brightness(ctx, 4, 1, 15, 5) < 0.30
-                face.bannerDarkRight = brightness(ctx, 41, 1, 15, 5) < 0.30
+                const left = brightness(ctx, 4, 1, 15, 5)
+                const right = brightness(ctx, 41, 1, 15, 5)
+                if (left >= 0)
+                    face.bannerDarkLeft = left < 0.30
+                if (right >= 0)
+                    face.bannerDarkRight = right < 0.30
             }
         }
 
@@ -1036,7 +1040,7 @@ Item {
         width: 254
         elide: Text.ElideRight
         text: face.userName + "@" + face.hostName
-        color: face.wallOn ? mt.textWhite : mt.pInk
+        color: face.wallOn ? mt.onPicture : mt.pInk
         style: face.wallOn ? Text.Outline : Text.Normal
         styleColor: Qt.rgba(0.10, 0.10, 0.22, 0.85)
         font.family: mt.fontFamily

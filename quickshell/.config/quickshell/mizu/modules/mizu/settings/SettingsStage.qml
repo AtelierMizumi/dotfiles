@@ -140,8 +140,8 @@ Item {
     // ===== what the others read =====
     readonly property alias phone: phone
     readonly property alias face: face
-    // The wallpaper gallery, once it is built (null before and after).
-    readonly property var wallpaperFace: wallLoader.item
+    // There is no wallpaper gallery screen any more (the Appearance page replaces it).
+    readonly property var wallpaperFace: null
     readonly property bool wallpapersUp: root.content === "wallpapers"
 
     // 0 = the Settings on the screen, 1 = the Wallpapers. It only animates when

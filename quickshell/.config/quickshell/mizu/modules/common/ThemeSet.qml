@@ -22,7 +22,8 @@ QtObject {
     readonly property color colBg: Tokens.surface
     readonly property color accentCyan: Tokens.accent        // first stop of every lit gradient
     readonly property color accentMint: Tokens.accent2       // second stop
-    readonly property color textWhite: Tokens.onAccent       // text and icons on accent fills and over pictures
+    readonly property color textWhite: Tokens.onAccent       // text and icons on accent fills
+    readonly property color onPicture: Qt.rgba(1, 1, 1, 1)   // text drawn straight over the wallpaper picture (with a dark edge)
 
     readonly property color surface: Tokens.surface
     readonly property color surfaceHover: Tokens.surfaceHover

@@ -93,6 +93,8 @@ ClippingRectangle {
     // paints when the picture changes. Until it has, the ink stays the navy one.
     property bool darkLeft: false
     property bool darkRight: false
+    // The picture was read: until it has been, the face keeps the plain panel ink.
+    property bool sampled: false
 
     Canvas {
         id: sampler
@@ -109,12 +111,13 @@ ClippingRectangle {
 
         onSrcChanged: {
             if (src.toString() !== "")
-                requestPaint()
+                loadImage(src)
         }
         onFramingChanged: requestPaint()
+        onImageLoaded: requestPaint()
 
         // Average brightness (0 black .. 1 white, in linear light) of a rectangle of
-        // the thumbnail.
+        // the thumbnail, or -1 when the canvas holds no pixels there.
         function brightness(ctx, x, y, w, h) {
             const d = ctx.getImageData(x, y, w, h).data
             let sum = 0
@@ -128,11 +131,11 @@ ClippingRectangle {
                 sum += 0.2126 * r + 0.7152 * g + 0.0722 * b
                 n++
             }
-            return n > 0 ? sum / n : 1
+            return n > 0 ? sum / n : -1
         }
 
         onPaint: {
-            if (src.toString() === "")
+            if (src.toString() === "" || !isImageLoaded(src))
                 return
             if (!(wall.aspect > 0))
                 return
@@ -145,12 +148,15 @@ ClippingRectangle {
             const f = lcd.framing || {}
             const r = IM.drawRect(width, height, wall.aspect * 1000, 1000, "crop",
                                   f.zoom === undefined ? 1 : f.zoom, f.panX || 0, f.panY || 0)
-            ctx.drawImage(wall.image, r.x, r.y, r.w, r.h)
+            ctx.drawImage(src, r.x, r.y, r.w, r.h)
 
             // Under the clock + date: face x 67..190, y 36..90 = thumbnail x 5..17, y 2..7.
             // Under the speed readout: face x 437..587, y 38..90 = thumbnail x 42..57, y 2..7.
-            lcd.darkLeft = brightness(ctx, 5, 2, 12, 5) < 0.30
-            lcd.darkRight = brightness(ctx, 42, 2, 15, 5) < 0.30
+            const left = brightness(ctx, 5, 2, 12, 5)
+            const right = brightness(ctx, 42, 2, 15, 5)
+            lcd.sampled = left >= 0 && right >= 0
+            lcd.darkLeft = left >= 0 && left < 0.30
+            lcd.darkRight = right >= 0 && right < 0.30
         }
     }
 
