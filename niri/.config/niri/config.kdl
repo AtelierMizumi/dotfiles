@@ -399,7 +399,7 @@ binds {
     // Design rules: every bind is Super plus at most two more keys, made of letters, digits and the thumb keys of
     // the Sofle base layer (no F-keys, Print, Home/End, Page keys or arrows needed; the arrow variants are extras
     // for laptop keyboards). Super is the left thumb key on the Sofle, so Super+Space, Super+Minus and
-    // Super+Equal are one-hand chords there (Super+Space switches the typing language). See docs/USAGE.md.
+    // Super+Equal are one-hand chords there. See docs/USAGE.md.
 
     // Apps.
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
@@ -408,11 +408,11 @@ binds {
     Mod+E hotkey-overlay-title="Open the File Manager: dolphin" { spawn "dolphin"; }
     Mod+C hotkey-overlay-title="Open the Editor: VS Code" { spawn "code"; }
 
-    // Typing language. The fcitx5 config switches input methods with Super+space, and niri takes a bound key before
-    // any app does, so niri runs the switch itself through fcitx5-remote: -t toggles keyboard-us <-> lotus
-    // (Vietnamese), -s picks an engine. This also works when no text field has the focus. The toggle returns to the
-    // last used engine, so Vietnamese and Japanese also have a direct bind each.
-    Mod+Space hotkey-overlay-title="Typing: toggle English / last engine" { spawn "fcitx5-remote" "-t"; }
+    // Typing language. Super+BackSpace cycles every engine of the fcitx5 group in profile order (keyboard-us ->
+    // lotus -> anthy -> keyboard-us) through scripts/fcitx5-cycle; `fcitx5-remote -t` only toggled to the last used
+    // engine and never reached the third one. This also works when no text field has the focus. Super+Space stays
+    // unbound here, so fcitx5's own Super+space (shared with Plasma) still works inside text fields.
+    Mod+BackSpace hotkey-overlay-title="Typing: next language (EN / VI / JA)" { spawn-sh "~/.config/niri/scripts/fcitx5-cycle"; }
     Mod+Alt+Space hotkey-overlay-title="Typing: Vietnamese (lotus)" { spawn "fcitx5-remote" "-s" "lotus"; }
     Mod+Shift+Space hotkey-overlay-title="Typing: Japanese (anthy)" { spawn "fcitx5-remote" "-s" "anthy"; }
 

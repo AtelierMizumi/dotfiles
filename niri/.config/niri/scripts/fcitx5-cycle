@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Switch fcitx5 to the next input method of the current group, in profile order, wrapping around
+# (keyboard-us -> lotus -> anthy -> keyboard-us on this machine). Bound to Mod+BackSpace in niri.
+# `fcitx5-remote -t` only toggles between the first item and the last used engine, so a third engine is never reached.
+# Reads ~/.config/fcitx5/profile and never writes it: Plasma shares that file.
+set -euo pipefail
+
+profile="${XDG_CONFIG_HOME:-$HOME/.config}/fcitx5/profile"
+[[ -r "$profile" ]] || { echo "fcitx5-cycle: no profile at $profile" >&2; exit 1; }
+
+current=$(fcitx5-remote -n 2>/dev/null) || { echo "fcitx5-cycle: fcitx5 is not running" >&2; exit 1; }
+[[ -n "$current" ]] || { echo "fcitx5-cycle: fcitx5 reports no input method" >&2; exit 1; }
+group=$(fcitx5-remote -q 2>/dev/null || true)
+
+# Item names of the group called $group, in order; the first group when $group is empty or unknown.
+mapfile -t items < <(awk -v want="$group" '
+  /^\[Groups\/[0-9]+\]$/ { sect = "group"; g = $0; sub(/^\[Groups\//, "", g); sub(/\]$/, "", g); next }
+  /^\[Groups\/[0-9]+\/Items\/[0-9]+\]$/ { sect = "item"; ig = $0; sub(/^\[Groups\//, "", ig); sub(/\/Items.*/, "", ig); next }
+  /^\[/ { sect = ""; next }
+  /^Name=/ {
+    name = substr($0, 6)
+    if (sect == "group") { gname[g] = name; if (first == "") first = g }
+    else if (sect == "item") { n[ig]++; item[ig, n[ig]] = name }
+  }
+  END {
+    pick = first
+    for (k in gname) if (gname[k] == want) pick = k
+    for (i = 1; i <= n[pick]; i++) print item[pick, i]
+  }
+' "$profile")
+(( ${#items[@]} > 0 )) || { echo "fcitx5-cycle: no input methods in $profile" >&2; exit 1; }
+
+next=${items[0]}
+for i in "${!items[@]}"; do
+  if [[ "${items[$i]}" == "$current" ]]; then
+    next=${items[$(( (i + 1) % ${#items[@]} ))]}
+    break
+  fi
+done
+fcitx5-remote -s "$next"

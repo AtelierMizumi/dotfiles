@@ -9,7 +9,7 @@ bảng các phím quan trọng ngay trên màn hình.
 |---|---|
 | Mở terminal (ghostty) | `Super+T` hoặc `Super+Return` |
 | Mở app / tìm file / chạy lệnh | `Super+D` |
-| Đổi gõ tiếng Anh / tiếng Việt | `Super+Space` |
+| Đổi bộ gõ (Anh → Việt → Nhật → Anh) | `Super+Backspace` |
 | Mở trình duyệt, file manager, VS Code | `Super+B`, `Super+E`, `Super+C` |
 | Đóng cửa sổ | `Super+Q` |
 | Chuyển sang cột bên trái / phải | `Super+H`, `Super+L` |
@@ -26,7 +26,8 @@ Super là phím Windows trên laptop, và là **phím ngón cái trái** (`LGUI`
   PgUp, PgDn hay mũi tên. Các biến thể mũi tên chỉ là phần thêm cho laptop (hoặc giữ layer NAV trên Sofle).
 - Phím sửa đổi thứ hai là **Shift hoặc Alt**, không phải Ctrl: trên Sofle, Ctrl chỉ có khi giữ `Space`, khó chạm cùng
   Super. Alt nằm ở ngón út trái, Shift ở ngón út trái hàng dưới.
-- Trên Sofle, `Super+Space` (đổi bộ gõ), `Super+-` và `Super+=` là ba phím ngón cái cạnh nhau, bấm bằng một tay.
+- Trên Sofle, `Super+-` và `Super+=` là các phím ngón cái cạnh nhau, bấm bằng một tay. `Super+Backspace` (đổi bộ gõ)
+  là hai ngón cái: Super ở ngón cái trái, Backspace ở ngón cái phải.
 
 ## Bảng phím
 
@@ -54,7 +55,7 @@ Super là phím Windows trên laptop, và là **phím ngón cái trái** (`LGUI`
 
 | Phím | Việc |
 |---|---|
-| `Super+Space` | chuyển qua lại giữa bàn phím US và bộ gõ đang dùng gần nhất (lúc đầu là Lotus, tiếng Việt) |
+| `Super+Backspace` | chuyển sang bộ gõ kế tiếp, xoay vòng: bàn phím US → Lotus (tiếng Việt) → anthy (tiếng Nhật) → US |
 | `Super+Alt+Space` | chọn thẳng tiếng Việt (Lotus) |
 | `Super+Shift+Space` | chọn thẳng tiếng Nhật (anthy) |
 
@@ -139,9 +140,12 @@ tách cửa sổ vào cột), `Super+[` và `Super+]`, các biến thể `Super+
 `QT_IM_MODULE`, `XMODIFIERS` cho mọi session, giống như trên Plasma. Nhóm bộ gõ trong
 `~/.config/fcitx5/profile` là: bàn phím US, Lotus (tiếng Việt, mặc định Telex) và anthy (tiếng Nhật).
 
-- **Vì sao phím đổi bộ gõ nằm trong niri:** cấu hình fcitx5 của bạn đổi bộ gõ bằng `Super+Space`, nhưng niri lấy phím
-  đã được bind trước mọi ứng dụng. Nên niri tự chạy việc đổi bộ gõ qua `fcitx5-remote`, kể cả khi chưa có ô nhập nào
-  được focus. Trạng thái bộ gõ nhớ riêng cho từng cửa sổ (`ShareInputState=No`).
+- **Vì sao phím đổi bộ gõ nằm trong niri:** `Super+Backspace` chạy `~/.config/niri/scripts/fcitx5-cycle`. Script đọc
+  thứ tự bộ gõ của nhóm hiện tại trong `~/.config/fcitx5/profile` (chỉ đọc, không ghi) rồi chọn bộ gõ kế tiếp bằng
+  `fcitx5-remote -s`, kể cả khi chưa có ô nhập nào được focus. Trước đây `fcitx5-remote -t` chỉ bật qua lại với bộ gõ
+  dùng gần nhất, nên bộ gõ thứ ba bị bỏ qua. Thêm bộ gõ trong `fcitx5-configtool` thì vòng xoay tự có bộ gõ đó.
+  `Super+Space` không còn bind trong niri, nên phím `Super+space` riêng của fcitx5 (dùng chung với Plasma) vẫn chạy
+  trong ô nhập. Trạng thái bộ gõ nhớ riêng cho từng cửa sổ (`ShareInputState=No`).
 - **Kiểm tra nhanh trong terminal:** `fcitx5-remote -n` in tên bộ gõ hiện tại (`keyboard-us`, `lotus` hoặc `anthy`);
   `fcitx5-remote -s lotus` chọn Lotus ngay, `fcitx5-remote -s keyboard-us` về gõ thường.
 - **Lotus cần dịch vụ nền:** `fcitx5-lotus-server@<tên user>` phải đang chạy (`systemctl status

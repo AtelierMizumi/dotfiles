@@ -213,13 +213,17 @@ t_layout_binds_moved_to_free_keys() {
   has_bind 'Mod+F' 'maximize-column;' || fail "Mod+F no longer maximizes the column"
 }
 
-# The fcitx5 config of this machine switches input methods with Super+space (EnumerateForwardKeys). niri takes a
-# bound key before any app, so a Super+Space bind that is not the switch would make Vietnamese typing unreachable.
-# fcitx5-remote talks to the running fcitx5 over D-Bus: -t toggles keyboard-us <-> lotus, -s <name> picks an engine.
-t_super_space_switches_the_input_method() {
-  has_bind 'Mod+Space' 'spawn "fcitx5-remote" "-t"' || fail "Mod+Space does not toggle English/Vietnamese with fcitx5-remote"
+# The typing language cycles on Super+BackSpace through every engine of the fcitx5 group (keyboard-us -> lotus ->
+# anthy); `fcitx5-remote -t` only toggled to the last used engine and never reached the third one. Super+Space is
+# left unbound in niri, so fcitx5's own Super+space (EnumerateForwardKeys, shared with Plasma) still works in text
+# fields. fcitx5-remote -s <name> picks one engine directly.
+t_super_backspace_cycles_the_input_method() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  has_bind 'Mod+BackSpace' 'spawn-sh "~/.config/niri/scripts/fcitx5-cycle"' || fail "Mod+BackSpace does not run the fcitx5-cycle script"
+  ! grep -qE '^[[:space:]]*Mod\+Space[[:space:]]' <<<"$active" || fail "Mod+Space is still bound in niri"
+  ! grep -qF 'fcitx5-remote" "-t"' <<<"$active" || fail "the -t toggle that skips the third engine is still bound"
   has_bind 'Mod+Shift+Space' 'spawn "fcitx5-remote" "-s" "anthy"' || fail "Mod+Shift+Space does not select the Japanese engine"
-  # The toggle returns to the last used engine, so Vietnamese needs a direct bind once Japanese has been used.
   has_bind 'Mod+Alt+Space' 'spawn "fcitx5-remote" "-s" "lotus"' || fail "Mod+Alt+Space does not select the Vietnamese engine"
 }
 

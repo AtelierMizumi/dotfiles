@@ -20,7 +20,7 @@ add_result_line() {
 }
 
 if command -v shellcheck >/dev/null 2>&1; then
-  if shellcheck scripts/*.sh tests/*.sh tests/stubs/*; then
+  if shellcheck scripts/*.sh tests/*.sh tests/stubs/* niri/.config/niri/scripts/*; then
     echo "PASS shellcheck"
     passed=$((passed + 1))
   else

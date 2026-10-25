@@ -10,7 +10,7 @@ BASELINE = ROOT / "docs/baseline/niri-config.default.kdl"
 GUIDE = ROOT / "docs/USAGE.md"
 
 # niri key names mapped to what the guide shows on a keycap.
-KEY_NAMES = {"Mod": "Super", "Minus": "-", "Equal": "=", "Comma": ",", "Period": ".", "Slash": "/", "Escape": "Esc"}
+KEY_NAMES = {"Mod": "Super", "Minus": "-", "Equal": "=", "Comma": ",", "Period": ".", "Slash": "/", "Escape": "Esc", "BackSpace": "Backspace"}
 
 
 def bind_lines(path: Path) -> dict[str, str]:
