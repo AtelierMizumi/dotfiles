@@ -55,7 +55,7 @@ SettingsPage {
         { name: "paper", color: Tokens.paper },
         { name: "ink", color: Tokens.ink },
         { name: "ink muted", color: Tokens.inkMuted },
-        { name: "on accent", color: Tokens.onAccent },
+        { name: "on accent", color: Tokens.accentInk },
         { name: "line", color: Tokens.line },
         { name: "danger", color: Tokens.danger },
         { name: "warning", color: Tokens.warning }

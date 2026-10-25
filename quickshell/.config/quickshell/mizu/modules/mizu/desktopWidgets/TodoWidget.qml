@@ -254,7 +254,7 @@ PanelWindow {
         }
 
         MaterialIcon {
-            color: btnArea.containsMouse ? mt.colBorder : mt.pInk
+            color: btnArea.containsMouse ? mt.accentInk : mt.pInk
             anchors.centerIn: parent
             name: btn.icon
             size: 18
@@ -371,7 +371,7 @@ PanelWindow {
                         }
 
                         MaterialIcon {
-                            color: mt.colBorder
+                            color: mt.accentInk
                             anchors.centerIn: parent
                             name: "checklist"
                             size: 22
@@ -425,7 +425,7 @@ PanelWindow {
                             id: clearTextSmall
                             anchors.centerIn: parent
                             text: "clear done (" + TodoService.doneCount + ")"
-                            color: clearAreaSmall.containsMouse ? mt.colBorder : mt.pInk
+                            color: clearAreaSmall.containsMouse ? mt.accentInk : mt.pInk
                             font.family: mt.fontFamily
                             font.pixelSize: 11
                             font.weight: Font.ExtraBold
@@ -738,7 +738,7 @@ PanelWindow {
                                 }
 
                                 MaterialIcon {
-                                    color: mt.colBorder
+                                    color: mt.accentInk
                                     anchors.centerIn: parent
                                     name: "check"
                                     size: 16
@@ -860,7 +860,7 @@ PanelWindow {
                                         }
 
                                         MaterialIcon {
-                                            color: gripArea.containsMouse || gripArea.pressed ? mt.colBorder : mt.pInk
+                                            color: gripArea.containsMouse || gripArea.pressed ? mt.accentInk : mt.pInk
                                             anchors.centerIn: parent
                                             name: "drag_indicator"
                                             size: 18
@@ -968,7 +968,7 @@ PanelWindow {
 
                             MaterialIcon {
                                 visible: list.dragDone
-                                color: mt.colBorder
+                                color: mt.accentInk
                                 anchors.centerIn: parent
                                 name: "check"
                                 size: 16
@@ -1092,7 +1092,7 @@ PanelWindow {
                         }
 
                         MaterialIcon {
-                            color: mt.colBorder
+                            color: mt.accentInk
                             anchors.centerIn: parent
                             name: "add"
                             size: 20
@@ -1133,7 +1133,7 @@ PanelWindow {
                             id: clearText
                             anchors.centerIn: parent
                             text: "clear done (" + TodoService.doneCount + ")"
-                            color: clearArea.containsMouse ? mt.colBorder : mt.pInk
+                            color: clearArea.containsMouse ? mt.accentInk : mt.pInk
                             font.family: mt.fontFamily
                             font.pixelSize: 11
                             font.weight: Font.ExtraBold

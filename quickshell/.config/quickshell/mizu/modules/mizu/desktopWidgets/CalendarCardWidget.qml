@@ -598,7 +598,7 @@ PanelWindow {
                                 y: 9
                                 width: 190
                                 elide: Text.ElideRight
-                                color: Qt.rgba(mt.colBorder.r, mt.colBorder.g, mt.colBorder.b, 0.82)
+                                color: Qt.rgba(mt.accentInk.r, mt.accentInk.g, mt.accentInk.b, 0.82)
                                 font.family: mt.fontFamily
                                 font.pixelSize: Math.round(10.5)
                                 font.weight: Font.ExtraBold
@@ -902,8 +902,8 @@ PanelWindow {
                                     width: parent.width
                                     horizontalAlignment: Text.AlignHCenter
                                     text: String(cell.c.d)
-                                    opacity: cell.c.inMonth ? 1 : 0.42
-                                    color: cell.c.isToday ? mt.colBorder : (cell.c.isWeekend ? win.weekendInk : mt.pInk)
+                                    opacity: cell.c.inMonth ? 1 : 0.72
+                                    color: cell.c.isToday ? mt.accentInk : (cell.c.isWeekend ? win.weekendInk : mt.pInk)
                                     font.family: mt.fontFamily
                                     font.pixelSize: 13
                                     font.weight: Font.ExtraBold
@@ -1057,7 +1057,7 @@ PanelWindow {
                                 }
 
                                 MaterialIcon {
-                                    color: mt.colBorder
+                                    color: mt.accentInk
                                     anchors.centerIn: parent
                                     name: "add"
                                     size: 20
@@ -1227,12 +1227,12 @@ PanelWindow {
                                                 size: 15
                                                 weight: 700
                                                 fill: chosen ? 1 : 0
-                                                color: chosen ? mt.colBorder : mt.pInk
+                                                color: chosen ? mt.accentInk : mt.pInk
                                             }
                                             Text {
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 text: modelData.label
-                                                color: chosen ? mt.colBorder : mt.pInk
+                                                color: chosen ? mt.accentInk : mt.pInk
                                                 font.family: mt.fontFamily
                                                 font.pixelSize: Math.round(11.5)
                                                 font.weight: Font.ExtraBold
@@ -1369,7 +1369,7 @@ PanelWindow {
                             y: 6
                             width: 176
                             elide: Text.ElideRight
-                            color: Qt.rgba(mt.colBorder.r, mt.colBorder.g, mt.colBorder.b, 0.82)
+                            color: Qt.rgba(mt.accentInk.r, mt.accentInk.g, mt.accentInk.b, 0.82)
                             font.family: mt.fontFamily
                             font.pixelSize: Math.round(10.5)
                             font.weight: Font.ExtraBold
@@ -1537,8 +1537,8 @@ PanelWindow {
                                     width: parent.width
                                     horizontalAlignment: Text.AlignHCenter
                                     text: String(mcell.c.d)
-                                    opacity: mcell.c.inMonth ? 1 : 0.42
-                                    color: mcell.c.isToday ? mt.colBorder : (mcell.c.isWeekend ? win.weekendInk : mt.pInk)
+                                    opacity: mcell.c.inMonth ? 1 : 0.72
+                                    color: mcell.c.isToday ? mt.accentInk : (mcell.c.isWeekend ? win.weekendInk : mt.pInk)
                                     font.family: mt.fontFamily
                                     font.pixelSize: 12
                                     font.weight: Font.ExtraBold

@@ -258,7 +258,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: -mt.shadowOffset / 2 + root.numberNudge
-                        color: mt.colBorder
+                        color: mt.accentInk
                         font.family: mt.fontFamily
                         font.pixelSize: 16
                         font.weight: Font.ExtraBold

@@ -108,7 +108,7 @@ Pill {
     readonly property real artWidth: root.capsule ? 24 : 35
     readonly property real dividerWidth: root.capsule ? 0 : 2
     readonly property real textMargin: 10
-    readonly property color ink: root.capsule ? mt.capInk : mt.colBorder
+    readonly property color ink: root.capsule ? mt.capInk : mt.accentInk
 
     cornerRadius: mt.radiusBadge
     ringWidth: 5
@@ -305,7 +305,7 @@ Pill {
                     elide: Text.ElideRight
                     visible: root.active && root.artist !== "" && !root.capsule
                     text: root.artist
-                    color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.72)
+                    color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.88)
                     font.family: mt.fontFamily
                     font.pixelSize: root.artistSize
                     font.weight: Font.Medium

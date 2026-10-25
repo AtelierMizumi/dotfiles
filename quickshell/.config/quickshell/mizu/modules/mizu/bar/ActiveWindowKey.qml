@@ -68,7 +68,7 @@ Item {
             anchors.centerIn: parent
             visible: !root.iconReady
             text: root.letter
-            color: mt.colBorder
+            color: mt.accentInk
             font.family: mt.fontFamily
             font.pixelSize: 15
             font.weight: Font.ExtraBold

@@ -113,7 +113,7 @@ PanelWindow {
         property int unlocking: win.leaving ? 1 : 0
         // The theme's colours for the lockscreen (with matugen and a separate
         // lockscreen wallpaper: that wallpaper's), the same as WallpaperLayer.qml.
-        property color colorWhite: Tokens.onAccent
+        property color colorWhite: Qt.rgba(1, 1, 1, 1)
         property color colorPink: Tokens.accent
         property color colorGreen: Tokens.accent2
         property color colorCyan: Tokens.accent

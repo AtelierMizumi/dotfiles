@@ -40,7 +40,7 @@ Item {
 
         MaterialIcon {
             // (Capsule: the chip is dark, so the ink is the chip's own.)
-            color: pill.capsule ? mt.capInk : (root.doNotDisturb ? mt.ink : mt.colBorder)
+            color: pill.capsule ? mt.capInk : (root.doNotDisturb ? mt.ink : mt.accentInk)
             anchors.centerIn: parent
             size: 18
             name: root.doNotDisturb ? "notifications_off" : "notifications_active"

@@ -55,6 +55,22 @@ class TextOverPicturesTest(unittest.TestCase):
         theme = (SHELL / "modules/common/ThemeSet.qml").read_text()
         self.assertRegex(theme, r"readonly property color onPicture: Qt\.rgba\(1, 1, 1, 1\)")
 
+class TokensPropertyNamesTest(unittest.TestCase):
+    """A property of the Tokens singleton named `on` + capital (onAccent, onChip) reads back as #000000 at run time,
+    whatever the palette says: QML reserves that spelling for signal handlers. Found by measuring the pills on screen:
+    every chip showed black text on a dark fill, although tokens.json had a light `onChip`. The JSON keys keep their
+    names; only the QML properties must not start with `on`.
+    """
+
+    def test_no_color_property_is_named_like_a_signal_handler(self):
+        names = re.findall(r"property\s+color\s+(on[A-Z]\w*)", TOKENS.read_text())
+        self.assertEqual(names, [], "rename these Tokens properties (e.g. onChip -> chipInk)")
+
+    def test_the_renamed_properties_exist(self):
+        defined = set(DEFINED.findall(TOKENS.read_text()))
+        for name in ("accentInk", "chipInk"):
+            self.assertIn(name, defined)
+
 
 if __name__ == "__main__":
     unittest.main()

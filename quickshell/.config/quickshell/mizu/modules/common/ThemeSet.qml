@@ -22,7 +22,8 @@ QtObject {
     readonly property color colBg: Tokens.surface
     readonly property color accentCyan: Tokens.accent        // first stop of every lit gradient
     readonly property color accentMint: Tokens.accent2       // second stop
-    readonly property color textWhite: Tokens.onAccent       // text and icons on accent fills
+    readonly property color textWhite: Tokens.accentInk       // text and icons on accent fills
+    readonly property color accentInk: Tokens.accentInk      // text on the bar's accent pills: 4.5:1 against the accent
     readonly property color onPicture: Qt.rgba(1, 1, 1, 1)   // text drawn straight over the wallpaper picture (with a dark edge)
 
     readonly property color surface: Tokens.surface
@@ -40,7 +41,7 @@ QtObject {
     readonly property color line: Tokens.line                // the OUTER border of every Pill, dialog and card
     readonly property color lineShadow: Tokens.shadow        // the hard drop shadow under them
     readonly property color chipFill: Tokens.chip
-    readonly property color chipInk: Tokens.onChip
+    readonly property color chipInk: Tokens.chipInk
     readonly property color scrim: Tokens.scrim
     readonly property color danger: Tokens.danger
     readonly property color warning: Tokens.warning

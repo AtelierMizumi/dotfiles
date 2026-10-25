@@ -609,7 +609,7 @@ PanelWindow {
                                         Text {
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: win.today ? win.today.high : ""
-                                            color: mt.colBorder
+                                            color: mt.accentInk
                                             font.family: mt.fontFamily
                                             font.pixelSize: 12
                                             font.weight: Font.ExtraBold
@@ -622,7 +622,7 @@ PanelWindow {
                                         Text {
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: win.today ? win.today.low : ""
-                                            color: mt.colBorder
+                                            color: mt.accentInk
                                             opacity: 0.8
                                             font.family: mt.fontFamily
                                             font.pixelSize: 12
@@ -1268,7 +1268,7 @@ PanelWindow {
                                             verticalAlignment: Text.AlignVCenter
                                             elide: Text.ElideRight
                                             text: dayRow.modelData.label + (!dayRow.isToday && dayRow.modelData.date ? " " + dayRow.modelData.date : "")
-                                            color: dayRow.isToday ? mt.colBorder : mt.chipInk
+                                            color: dayRow.isToday ? mt.accentInk : mt.chipInk
                                             font.family: mt.fontFamily
                                             font.pixelSize: 10
                                             font.weight: Font.ExtraBold
@@ -1510,7 +1510,7 @@ PanelWindow {
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: win.today ? win.today.high : ""
-                                        color: mt.colBorder
+                                        color: mt.accentInk
                                         font.family: mt.fontFamily
                                         font.pixelSize: 13
                                         font.weight: Font.ExtraBold
@@ -1523,7 +1523,7 @@ PanelWindow {
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: win.today ? win.today.low : ""
-                                        color: mt.colBorder
+                                        color: mt.accentInk
                                         opacity: 0.8
                                         font.family: mt.fontFamily
                                         font.pixelSize: 13

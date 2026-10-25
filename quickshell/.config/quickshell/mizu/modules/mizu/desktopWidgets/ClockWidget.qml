@@ -372,7 +372,7 @@ PanelWindow {
             Text {
                 anchors.centerIn: parent
                 text: kt.digit
-                color: kt.ghost ? mt.inkSub : mt.colBorder
+                color: kt.ghost ? mt.inkSub : mt.accentInk
                 font.family: mt.fontFamily
                 font.pixelSize: 38
                 font.weight: Font.ExtraBold
@@ -485,7 +485,7 @@ PanelWindow {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: ds.day
-            color: mt.colBorder
+            color: mt.accentInk
             font.family: mt.fontFamily
             font.pixelSize: 20
             font.weight: Font.ExtraBold
@@ -538,7 +538,7 @@ PanelWindow {
             verticalAlignment: Text.AlignVCenter
             text: "AM"
             opacity: sw.full ? 0 : 1
-            color: sw.pm ? mt.pInkSub : mt.colBorder
+            color: sw.pm ? mt.pInkSub : mt.accentInk
             font.family: mt.fontFamily
             font.pixelSize: 12
             font.weight: Font.ExtraBold
@@ -554,7 +554,7 @@ PanelWindow {
             verticalAlignment: Text.AlignVCenter
             text: "PM"
             opacity: sw.full ? 0 : 1
-            color: sw.pm ? mt.colBorder : mt.pInkSub
+            color: sw.pm ? mt.accentInk : mt.pInkSub
             font.family: mt.fontFamily
             font.pixelSize: 12
             font.weight: Font.ExtraBold
@@ -568,7 +568,7 @@ PanelWindow {
             verticalAlignment: Text.AlignVCenter
             text: "24H"
             opacity: sw.full ? 1 : 0
-            color: mt.colBorder
+            color: mt.accentInk
             font.family: mt.fontFamily
             font.pixelSize: 12
             font.weight: Font.ExtraBold
@@ -624,7 +624,7 @@ PanelWindow {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             text: chip.label
-            color: mt.colBorder
+            color: mt.accentInk
             font.family: mt.fontFamily
             font.pixelSize: 11
             font.weight: Font.ExtraBold
@@ -677,7 +677,7 @@ PanelWindow {
             Text {
                 anchors.centerIn: parent
                 text: Qt.locale().dayName(db.dow, Locale.ShortFormat).toUpperCase()
-                color: db.today ? mt.colBorder : mt.pInkSub
+                color: db.today ? mt.accentInk : mt.pInkSub
                 font.family: mt.fontFamily
                 font.pixelSize: 10
                 font.weight: Font.ExtraBold

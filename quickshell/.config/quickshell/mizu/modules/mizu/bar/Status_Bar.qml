@@ -635,7 +635,7 @@ Item {
                     lineHeightMode: Text.FixedHeight
                     lineHeight: Math.round(font.pixelSize * 1.25)
                     text: activeWindow.line1.replace(/\s+/g, " ")
-                    color: status_Bar.capsule ? mt.capInk : mt.colBorder
+                    color: status_Bar.capsule ? mt.capInk : mt.accentInk
                     font.family: mt.fontFamily
                     font.pixelSize: status_Bar.capsule ? mt.fontSizeInfo
                         : (activeWindow.hasWindow ? mt.fontSizeTitle : mt.fontSizeIdle)
@@ -658,7 +658,7 @@ Item {
                     // (Capsule: one line, the app; the title is in the media / window popups.)
                     visible: activeWindow.line2 !== "" && !status_Bar.capsule
                     text: activeWindow.line2.replace(/\s+/g, " ")
-                    color: Qt.rgba(mt.colBorder.r, mt.colBorder.g, mt.colBorder.b, 0.72)
+                    color: Qt.rgba(mt.accentInk.r, mt.accentInk.g, mt.accentInk.b, 0.88)
                     font.family: mt.fontFamily
                     font.pixelSize: mt.fontSizeSub
                     font.weight: Font.Medium

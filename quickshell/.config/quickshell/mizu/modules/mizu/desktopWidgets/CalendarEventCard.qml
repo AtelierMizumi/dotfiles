@@ -138,7 +138,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: ec.weekdayText
-                color: mt.colBorder
+                color: mt.accentInk
                 font.family: mt.fontFamily
                 font.pixelSize: 10
                 font.weight: Font.ExtraBold

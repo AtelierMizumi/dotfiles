@@ -62,12 +62,12 @@ Item {
             size: 15
             weight: 700
             fill: 0
-            color: chip.primary || (chip.danger && chip.lit) ? mt.colBorder : mt.pInk
+            color: chip.primary || (chip.danger && chip.lit) ? mt.accentInk : mt.pInk
         }
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: chip.label
-            color: chip.primary || (chip.danger && chip.lit) ? mt.colBorder : mt.pInk
+            color: chip.primary || (chip.danger && chip.lit) ? mt.accentInk : mt.pInk
             font.family: mt.fontFamily
             font.pixelSize: 11
             font.weight: Font.ExtraBold
