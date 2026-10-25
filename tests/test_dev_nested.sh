@@ -105,6 +105,25 @@ t_nested_config_validates_and_cannot_quit_the_real_session() {
   [[ "$out" == *"config is valid"* ]] || fail "no 'config is valid': $out"
 }
 
+t_measure_idle_is_valid_bash_and_asks_for_a_shell_dir() {
+  local script="$ROOT/scripts/dev/measure-idle.sh" err code
+  [[ -x "$script" ]] || fail "$script is missing or not executable"
+  bash -n "$script" || fail "syntax error in $script"
+  err=$("$script" 2>&1 >/dev/null)
+  code=$?
+  [[ $code -eq 64 ]] || fail "exit $code without arguments, expected 64"
+  [[ "${err,,}" == *usage* ]] || fail "no usage text: $err"
+}
+
+t_measure_idle_refuses_a_missing_shell_dir_before_starting_anything() {
+  setup
+  local err code
+  err=$(MIZU_DEV_STATE="$STATE" "$ROOT/scripts/dev/measure-idle.sh" "$STATE/nope" 2>&1 >/dev/null)
+  code=$?
+  [[ $code -eq 2 ]] || fail "exit $code, expected 2: $err"
+  [[ ! -e "$STATE/niri.pid" ]] || fail "a nested session was started"
+}
+
 t_runs_the_system_quickshell_when_nothing_is_staged() {
   setup
   mkdir -p "$STATE/bin" "$STATE/empty-stage"
