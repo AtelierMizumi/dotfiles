@@ -1,7 +1,8 @@
 # mizu shell: SekaiPop-based Quickshell shell for niri with a smart wallpaper palette
 
-Status: approved under the user's autonomous brief (2026-10-25). Approval gates are waived, design decisions are
-recorded as **Ruling** lines, and a deep-thinker review replaces the user review.
+Status: approved under the user's autonomous brief (2026-10-25). Approval gates are waived and design decisions are
+recorded as **Ruling** lines. The independent review that replaces the user review was an advisor pass on 2026-10-25
+(its findings are folded in; the planned deep-thinker pass died on a rate limit).
 ADR: docs/adr/0001-own-quickshell-shell.md. Research: docs/research/quickshell-niri-shell.md,
 docs/research/sekaipop-harvest-map.md.
 
@@ -85,7 +86,9 @@ Interface (the only thing callers learn):
   - Two adapters at each seam: `magick` and synthetic grids; `noctalia theme --scheme S --dark|--light` and a fake
     generator.
 
-Algorithm (validated by the prototype on 31 wallpapers; prototype on branch `prototype/smart-palette`):
+Algorithm. The prototype (`docs/research/smart-palette-prototype/`) validated it in **dark mode only**, on 31
+images. Light mode, `auto`, accent correction against a light backdrop and the hue rotation are new in the production
+tool and must be covered by tests in both modes (see §10):
 
 1. **Analysis on the whole grid:**
    - mean L* and chroma C* (CIELAB, D65);
@@ -108,9 +111,11 @@ Algorithm (validated by the prototype on 31 wallpapers; prototype on branch `pro
    - **Text contrast:** raise opacity in 0.03 steps until text contrast ≥ 4.5:1 or opacity reaches 0.97. If that
      still fails, set text to white/black.
    - **Accent contrast:** shift the accent's L* in 2-unit steps until accent contrast ≥ 3:1 against the effective
-     backdrop.
-6. **Role mapping to tokens:** see §4. `accent2` is the accent rotated +28° in LCh at the same L* and C*, so the
-   keycap gradients stay analogous. The `on_*` roles are checked against their fills: ≥ 4.5:1, corrected the same way.
+     backdrop. The direction follows the mode: lighter against a dark backdrop, darker against a light one. If the
+     limit is reached (L* 96 or 8) without ≥ 3:1, fall back to the generator's `on_surface` for that surface.
+6. **Role mapping to tokens:** see §4. `accent2` is the accent rotated +28° in LCh at the same L*. Chroma is
+   reduced in steps of 2 until the color is inside the sRGB gamut, so clipping never shifts the hue. The `on_*` roles
+   are checked against their fills: ≥ 4.5:1, corrected the same way.
 7. **Cache:** results are cached by sha256 of the image plus the mode, the overrides and the tool version, in
    `~/.cache/mizu/palette-cache/`. Re-selecting a wallpaper is instant.
 
@@ -254,8 +259,9 @@ Target `mizu` (one stable interface for niri binds). The functions:
 | volume-up/down/mute, mic-mute, brightness-up/down, media-* | `... mizu <fn>` | the existing `noctalia msg` commands |
 
 The keys in config.kdl do not change (Mod+D, Mod+S, Mod+Alt+S, Mod+Shift+V, Mod+N, Mod+Escape, Super+Alt+L,
-hardware keys). Only the bind actions change, to `spawn "~/.config/niri/scripts/shell-ipc" "<action>"` (spawn
-expands `~`; verified by niri validate and a nested run). Mod+Alt+W (new, 3 keys) maps to `wallpaper-next`.
+hardware keys). Only the bind actions change, to `spawn-sh "~/.config/niri/scripts/shell-ipc <action>"` (`spawn-sh` runs the line through a shell, so `~` expands;
+`niri validate` only checks syntax, the expansion is proven by the dispatcher test and the nested run). Mod+Alt+W
+(new, 3 keys) maps to `wallpaper-next`.
 
 ## 8. The one command: scripts/switch-shell.sh
 
@@ -279,17 +285,24 @@ skill. Steps:
    - `niri validate`;
    - `check-plasma-intact.sh noctalia`;
    - `noctalia config validate`.
-6. **Noctalia fallback alignment:** back up `~/.local/state/noctalia/settings.toml`, then run
-   `noctalia msg color-scheme-set wallpaper faithful` while Noctalia still runs.
+6. **Noctalia settings:** `~/.local/state/noctalia/settings.toml` is the user's GUI choice and wins over the repo
+   config (on 2026-10-25 it held `source = "builtin"`, Catppuccin). The script never writes it. It only prints when
+   the live theme differs from the repo's `wallpaper`/`faithful`, with the one `noctalia msg color-scheme-set` line
+   to align it if the user wants that.
 7. **Switch:**
    - write `~/.config/niri/shell` = `mizu`;
    - stop Noctalia;
-   - start mizu through `niri msg action spawn -- ~/.config/niri/scripts/shell-start`;
-   - wait for `qs -c mizu ipc call mizu ping`.
+   - start mizu through `niri msg action spawn-sh -- ~/.config/niri/scripts/shell-start`;
+   - wait for `qs -c mizu ipc call mizu ping`;
+   - then ask "keep mizu? [y/N]" for **60 seconds**; no answer (or `n`) reverts to Noctalia the same way as a failure.
+     This guards against a shell that starts but cannot be used (no bar, no lock, no input).
 8. **Failure handling:**
    - on any failure after step 4: restore `shell` = `noctalia`, restart Noctalia and print the log path;
-   - a failure before step 4 changes nothing.
-   - `--rollback` returns to Noctalia (same mechanism) and leaves the packages installed.
+   - a failure before step 4 changes nothing;
+   - `--rollback` needs only a terminal, the `shell` file and `shell-start`: it does not call `qs` or anything from
+     mizu, so it works when mizu is broken. It leaves the packages installed.
+   - the report lists the TTY recovery steps (`echo noctalia > ~/.config/niri/shell`, then `niri msg action quit`
+     and log in again) in case the screen is locked or unusable.
 
 ## 9. Safety checks (extend the existing ones)
 
@@ -307,13 +320,32 @@ skill. Steps:
 
 | Area | Type | Cases |
 |---|---|---|
-| Palette tool | unit (python, synthetic grids, fake generator) | scheme pick at the thresholds (C* 6.9 / 7 / 15.9 / 16); auto mode; opacity clamps; text/accent contrast always ≥ 4.5 / 3 after correction (property test over random grids); `accent2` hue +28°; overrides win; schema keys present |
+| Palette tool | unit (python, synthetic grids, fake generator) | scheme pick at the thresholds (C* 6.9 / 7 / 15.9 / 16); auto mode (both outcomes, incl. a bright wallpaper with a dark bar region); opacity clamps; text/accent contrast always ≥ 4.5 / 3 after correction, as a property test over random grids **in both dark and light mode**, including a very bright and a very dark backdrop where the accent needs the `on_surface` fallback; `accent2` is +28° in hue and always inside the sRGB gamut (property test over random accents, including saturated blues and greens near the gamut edge); overrides win; schema keys present |
 | Palette CLI | integration (tmp dirs, real magick, fake or real noctalia) | atomic writes; exit 2 keeps old files; cache hit; niri output validates with `niri validate` |
-| Pure JS (NiriMath, PhoneRoute, PhoneMath, FlipMath) | node | upstream tests kept and run by run-all.sh, plus `focusedOutput()` |
+| niri colors include, as deployed | integration (tmp dir) | a `config.kdl` that is a **symlink** into another directory, with `colors.kdl` next to the symlink: `niri validate` must print no "optional include not found" warning, and the focus ring in the loaded config takes the primary. A missing `colors.kdl` must still validate |
+| Palette agrees with its source | integration (real noctalia + magick) | for the live wallpaper, the primary in `~/.cache/mizu/tokens.json` comes from `noctalia theme <wallpaper> --scheme <scheme> --dark|--light`, and `colors.kdl` carries the same primary as the tokens |
+| Pure JS (NiriMath, PhoneRoute, PhoneMath, FlipMath) | node | only the upstream tests that cover **harvested** files are imported (`niri-test/niri_unit.js`, the PhoneRoute, PhoneMath and FlipMath unit tests), run by run-all.sh, plus `focusedOutput()`. Upstream's own tip is "81 pass, 9 fail": the failing ones belong to pruned modules (Hyprland settings, keybinds, display, theme) and are **not** imported or skipped. The list of tests left out, and which pruned module each belongs to, is kept in `quickshell/.config/quickshell/mizu/UPSTREAM.md` |
 | Safety scan | static | §9 |
-| shell-ipc, shell-start | bash with fakes | each action maps to each shell; missing or garbage `shell` file → noctalia |
-| switch-shell.sh | bash with fake sudo/pacman/git/stow/niri/qs/noctalia | dry-run changes nothing; plasma conflict aborts; gate failure rolls back; `--rollback` |
-| Shell smoke | nested niri (manual verification script `scripts/dev/nested-shell.sh`, not in run-all) | loads with no QML `TypeError`/`ReferenceError`/"is not a type"; screenshots of bar, quick panel, settings, launcher, widgets, OSD, lock on several wallpapers |
+| shell-ipc, shell-start | bash with fakes | each action maps to each shell; missing or garbage `shell` file → noctalia; `~` in the bind line expands to the real script |
+| switch-shell.sh | bash with fake sudo/pacman/git/stow/niri/qs/noctalia | dry-run changes nothing; plasma conflict aborts; gate failure rolls back; the 60 s confirm times out and reverts; `--rollback` works with `qs` missing and never writes `settings.toml` |
+| Lock, nested niri | scripted, in the nested session | correct password unlocks; wrong password stays locked and does not touch faillock; `qs` killed while locked leaves the session locked (niri's lock surface remains, as the protocol requires) and the TTY recovery steps in §8 work |
+| Shell smoke | nested niri (manual verification script `scripts/dev/nested-shell.sh`, not in run-all) | loads with no QML `TypeError`/`ReferenceError`/"is not a type"; screenshots of bar, quick panel, settings, launcher, widgets, OSD, lock on several wallpapers (dark, bright, grey, saturated) |
+
+**Parity report.** The final report splits every parity item into **verified in the nested niri** (on a private
+D-Bus, so against fakes or nothing) and **first real run at switch time**. The second list is the one the user
+watches: notification server ownership, polkit agent registration (in the nested run the registration failed
+because Noctalia's agent already owned the subject), tray watcher, MPRIS players, the real lock, idle.
+
+## 10a. Order of work
+
+1. **Palette tool first, tests first** (python, no display). It is the user's first ask, and any slippage then lands
+   on the QML work, not on the palette. Includes the include-as-deployed test and the colors.kdl hookup through
+   Noctalia's template, so the focus ring already follows the wallpaper before the new shell exists.
+2. Fork import and the safety scan, red, then pruning until green (the shell keeps running in the nested niri at each
+   step; the baseline already works).
+3. Tokens adapter, Compositor, Catcher, IPC target, dispatcher scripts.
+4. Surfaces in the order of the harvest map's port list.
+5. `switch-shell.sh`, quality gates, docs.
 
 ## 11. Out of scope for milestone 1
 

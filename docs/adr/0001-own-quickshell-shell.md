@@ -1,6 +1,7 @@
 # ADR-0001: Own Quickshell shell "mizu", forked from SekaiPop and pruned, replacing Noctalia on niri
 
-**Status:** Accepted (self-approved under the user's autonomous brief, reviewed by a deep-thinker agent)
+**Status:** Accepted under the user's autonomous brief. Review: an advisor review on 2026-10-25 (folded in below). The
+planned deep-thinker review did not run: that agent died on a rate limit.
 **Date:** 2026-10-25
 **Deciders:** the user (brief), Claude (implementation)
 
@@ -14,9 +15,14 @@
   environment.d, /etc); no sudo by Claude; one command for the user to switch.
 - Facts (docs/research/quickshell-niri-shell.md, docs/research/sekaipop-harvest-map.md):
   - Noctalia v5 is C++ with Luau plugins, so QML parts cannot be grafted onto it.
-  - SekaiPop is Quickshell QML (GPL-3.0, 369 files) built for Hyprland. Run on niri in a sandbox on 2026-10-25, the
-    bar, desktop clock and dock worked. The phone surfaces did not open, because they pick their screen through
-    `Hyprland.focusedMonitor`.
+  - SekaiPop is Quickshell QML (GPL-3.0, 369 files) built for Hyprland. **Baseline, measured 2026-10-25:** upstream
+    with no patch, started in a sandbox (private HOME, XDG dirs and D-Bus) inside a nested niri 26.04, drew the bar,
+    desktop clock and dock, and its quick panel (portrait phone with Wi-Fi, Bluetooth, mic, speaker and
+    notifications), launcher phone and settings phone (landscape, 2.5D) all opened through `qs ipc call`.
+    `Hyprland.focusedMonitor` is null there and the `focusedScreen()` helpers already fall back to the first screen.
+    The first attempt showed no phone, but a repeat with longer waits did, so that failure was timing: the waits had
+    been too short after the welcome tour was closed, and the shell restart that followed was the nested niri shutting
+    down. Evidence is reproducible with the sandbox scripts described in the spec (section 10).
   - Its harvestable parts are pure UI, while the Hyprland coupling sits in a few host files and services. Its theming
     writes kdeglobals, GTK, qt*ct and gsettings by default, and ran `gsettings set` at startup in the sandbox.
 
@@ -24,8 +30,9 @@
 
 Fork SekaiPop's `sekaipop/` tree into this repo as the Quickshell config `mizu` (stow package `quickshell`), then
 prune it. Remove every forbidden write and every out-of-scope module, replace the theme system with a tokens adapter
-fed by our own palette tool, and replace Hyprland APIs with niri IPC. Noctalia stays installed: one line in
-config.kdl picks the shell, and `switch-shell.sh --rollback` goes back.
+fed by our own palette tool, and replace Hyprland APIs with niri IPC. Noctalia stays installed: a one-word file
+(`~/.config/niri/shell`) read by `shell-start` and `shell-ipc` picks the shell, and `switch-shell.sh --rollback`
+goes back. Because the baseline already works on niri, the work is mostly removal and recolouring, not a port.
 
 ## Options considered
 
