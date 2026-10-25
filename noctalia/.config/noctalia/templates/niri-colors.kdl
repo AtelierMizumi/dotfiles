@@ -1,0 +1,12 @@
+// Rendered by Noctalia (user template niri-colors) to ~/.config/niri/colors.kdl whenever the wallpaper palette changes.
+// niri includes that file after its layout block, so these colors override the amber fallback; niri reloads on change.
+layout {
+    focus-ring {
+        active-color "{{colors.primary.default.hex}}"
+        inactive-color "{{colors.surface_variant.default.hex}}"
+        urgent-color "{{colors.error.default.hex}}"
+    }
+    insert-hint {
+        color "{{colors.primary.default.hex}}80"
+    }
+}

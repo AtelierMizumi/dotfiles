@@ -8,7 +8,8 @@ phase ends on a gate command that must exit 0 before the next phase starts.
 - Run `scripts/check-plasma-intact.sh snapshot` and `compare` only while plasmashell is stopped; the script refuses otherwise.
 - Keep Plasma's files (`kdeglobals`, `mimeapps.list`, `gtk-*`, `xdg-desktop-portal/*`) byte-identical. A `CHANGED:` line from `compare` stops the install.
 - Stow from the main checkout, never from a worktree under `.claude/worktrees/`.
-- Treat Noctalia's `sync_color_scheme`, every template and `gnome-keyring` as off limits (README.md "Rules").
+- Treat Noctalia's `sync_color_scheme`, its built-in and community templates and `gnome-keyring` as off limits
+  (README.md "Rules"). The only allowed template renders into `~/.config/niri/` with no hook.
 
 ## Where am I?
 Read-only commands that tell the current phase:

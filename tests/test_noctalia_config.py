@@ -1,6 +1,7 @@
 """Tests for the Noctalia overlay config (spec section 3, rows 1-8): values the repo config must pin."""
 
 import os
+import shutil
 import subprocess
 import tempfile
 import tomllib
@@ -10,6 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "noctalia/.config/noctalia/config.toml"
 CHECKER = ROOT / "scripts/check-plasma-intact.sh"
+# Any image works for rendering the template; this one ships with plasma-workspace-wallpapers.
+WALLPAPER_SAMPLE = Path("/usr/share/wallpapers/ColdRipple/contents/images/2560x1440.jpg")
 
 
 class NoctaliaConfigTest(unittest.TestCase):
@@ -18,20 +21,50 @@ class NoctaliaConfigTest(unittest.TestCase):
         with CONFIG.open("rb") as handle:
             cls.config = tomllib.load(handle)
 
-    def test_theme_uses_custom_mizu_dark(self):
+    def test_theme_follows_the_wallpaper_with_the_faithful_scheme(self):
+        # faithful keeps the bar tinted with the wallpaper's own hue; m3-tonal-spot (the default) came out grey.
         theme = self.config["theme"]
         self.assertEqual(theme["mode"], "dark")
-        self.assertEqual(theme["source"], "custom")
-        self.assertEqual(theme["custom_palette"], "Mizu")
+        self.assertEqual(theme["source"], "wallpaper")
+        self.assertEqual(theme["wallpaper_scheme"], "faithful")
 
     def test_sync_color_scheme_is_false(self):
         self.assertIs(self.config["theme"]["sync_color_scheme"], False)
 
-    def test_all_templates_are_off(self):
+    def test_builtin_and_community_templates_are_off(self):
         templates = self.config["theme"]["templates"]
         self.assertIs(templates["enable_builtin_templates"], False)
         self.assertIs(templates["enable_community_templates"], False)
-        self.assertNotIn("user", templates)
+
+    def test_only_user_template_renders_the_niri_colors(self):
+        users = self.config["theme"]["templates"]["user"]
+        self.assertEqual(list(users), ["niri-colors"])
+        template = users["niri-colors"]
+        self.assertEqual(template, {"input_path": "templates/niri-colors.kdl", "output_path": "~/.config/niri/colors.kdl"})
+        self.assertTrue((CONFIG.parent / template["input_path"]).is_file(), "the template file is not in the repo")
+
+    def test_niri_colors_template_renders_a_valid_niri_include(self):
+        # Render the template with Noctalia's own generator, then let niri validate a config that includes it.
+        if not (shutil.which("noctalia") and shutil.which("niri")):
+            self.skipTest("noctalia or niri is not installed")
+        template = CONFIG.parent / "templates/niri-colors.kdl"
+        with tempfile.TemporaryDirectory() as tmp:
+            rendered = Path(tmp) / "colors.kdl"
+            subprocess.run(
+                ["noctalia", "theme", str(WALLPAPER_SAMPLE), "--scheme", "faithful", "--dark",
+                 "-r", f"{template}:{rendered}"],
+                capture_output=True, text=True, check=True,
+            )
+            text = rendered.read_text(encoding="utf-8")
+            self.assertNotIn("{{", text, "unrendered template tokens left")
+            self.assertRegex(text, r'active-color "#[0-9a-fA-F]{6}"')
+            main = Path(tmp) / "config.kdl"
+            main.write_text('include optional=true "colors.kdl"\n', encoding="utf-8")
+            result = subprocess.run(["niri", "validate", "-c", str(main)], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_wallpaper_picker_uses_the_wallpapers_folder(self):
+        self.assertEqual(self.config["wallpaper"]["directory"], "~/Pictures/Wallpapers")
 
     def test_polkit_agent_enabled(self):
         self.assertIs(self.config["shell"]["polkit_agent"], True)

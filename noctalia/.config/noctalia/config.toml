@@ -3,20 +3,26 @@
 
 [theme]
 mode = "dark"
-# Unverified: the palette docs say "custom", example.toml lists builtin | wallpaper | community.
-# Settled by `noctalia config validate` after install (plan Task 7).
-# Fallback if rejected: source = "builtin" with builtin = "Tokyo-Night".
-source = "custom"
-custom_palette = "Mizu"
+# Colors come from the wallpaper. faithful keeps the bar tinted with the wallpaper's own hue; the default
+# m3-tonal-spot came out near grey (compared on 7 wallpapers, 2026-10-25). The Mizu palette stays in palettes/ as a
+# fixed alternative: source = "custom", custom_palette = "Mizu".
+source = "wallpaper"
+wallpaper_scheme = "faithful"
 # Upstream default is true and runs `gsettings set org.gnome.desktop.interface color-scheme ...`,
 # a user-wide write that also reaches GTK apps under Plasma.
 sync_color_scheme = false
 
 [theme.templates]
-# All templates stay off: the GTK/Qt/KColorScheme templates write gtk-* and kdeglobals,
-# and the niri template edits niri/config.kdl.
+# Built-in and community templates stay off: the GTK/Qt/KColorScheme templates write gtk-* and kdeglobals, and the
+# built-in niri template appends to niri/config.kdl (a stow symlink into this repo).
 enable_builtin_templates = false
 enable_community_templates = false
+
+[theme.templates.user.niri-colors]
+# The only template: the focus-ring colors for niri, rendered into ~/.config/niri/colors.kdl (included by config.kdl).
+# Plasma never reads that directory, and there is no hook. scripts/check_noctalia.py allows exactly this shape.
+input_path = "templates/niri-colors.kdl"
+output_path = "~/.config/niri/colors.kdl"
 
 [shell]
 # Nothing else starts a polkit agent in a niri session.
@@ -40,6 +46,10 @@ timeout = 1800
 [idle.behavior.lock]
 action = "lock"
 timeout = 2700
+
+[wallpaper]
+# The wallpaper picker lists this folder (landscape/, anime/ and cinematic/ from Wallhaven, 2026-10-25).
+directory = "~/Pictures/Wallpapers"
 
 [wallpaper.default]
 # ColdRipple from Plasma's wallpapers: a pier in fog. The wallpaper widget in the bar picks another one; that choice

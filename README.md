@@ -19,8 +19,9 @@ Plan: [`docs/superpowers/plans/2026-10-24-niri-noctalia-rice.md`](docs/superpowe
 - No secrets (`.env`, tokens, keys) and no binary documents in this repo.
 - Environment variables for the rice go in the compositor config, never in `environment.d` or shell profiles
   (they would leak into Plasma).
-- All Noctalia templates stay off and `sync_color_scheme` stays `false`: they would write `gtk-*`, `kdeglobals`
-  and the user-wide gsettings `color-scheme`.
+- Noctalia's built-in and community templates stay off and `sync_color_scheme` stays `false`: they would write
+  `gtk-*`, `kdeglobals` and the user-wide gsettings `color-scheme`. The one exception is the `niri-colors` user
+  template, which only renders `~/.config/niri/colors.kdl` (Plasma never reads `~/.config/niri`) and runs no hook.
 - Do not install `gnome-keyring`: it provides `org.freedesktop.secrets`, the name KWallet serves for Plasma.
 
 ## Layout
@@ -29,7 +30,8 @@ Plan: [`docs/superpowers/plans/2026-10-24-niri-noctalia-rice.md`](docs/superpowe
 |---|---|
 | `niri/.config/niri/config.kdl` | niri config (stow package `niri`) |
 | `niri/.config/xdg-desktop-portal/niri-portals.conf` | portal routing for the niri session (stow package `niri`) |
-| `noctalia/.config/noctalia/config.toml`, `palettes/Mizu.json` | Noctalia overlay and the Mizu palette (stow package `noctalia`) |
+| `noctalia/.config/noctalia/config.toml`, `templates/niri-colors.kdl`, `palettes/Mizu.json` | Noctalia overlay (colors from the wallpaper, `faithful` scheme), the niri focus-ring template, and the fixed Mizu palette kept as an alternative (stow package `noctalia`) |
+| `niri/.config/niri/scripts/fcitx5-cycle` | Super+BackSpace: next typing language in fcitx5 profile order |
 | `docs/USAGE.md` | user guide in Vietnamese: keymap for laptop and Sofle, daily coding workflow, idle, rollback |
 | `docs/baseline/niri-config.default.kdl` | the untouched default niri config this one started from |
 | `scripts/check-plasma-intact.sh`, `scripts/check_noctalia.py` | proof that Plasma is untouched (see Checks) |
@@ -52,9 +54,10 @@ portal that screen share (and Discord) needs. Plasma keeps using its own `kde-po
   State lives in `~/.local/state/dotfiles-check`.
 - `packages` checks that `xdg-desktop-portal-kde`, `plasma-desktop` and `sddm` are installed with no missing files.
 - `noctalia` checks the repo config **and** the live `~/.config/noctalia` (honoring `NOCTALIA_CONFIG_HOME`), plus
-  `~/.local/state/noctalia/settings.toml` (the GUI overrides, which win; honoring `NOCTALIA_STATE_HOME`). Every
-  template must be off and `sync_color_scheme` false. An `[include]` table is reported as `UNSUPPORTED INCLUDE`
-  because the checker cannot expand it.
+  `~/.local/state/noctalia/settings.toml` (the GUI overrides, which win; honoring `NOCTALIA_STATE_HOME`). Built-in
+  and community templates must be off, a user template may only render a file under `~/.config/niri/` (not
+  `config.kdl`) with no hook, and `sync_color_scheme` must be false. An `[include]` table is reported as
+  `UNSUPPORTED INCLUDE` because the checker cannot expand it.
 
 ## Install runbook (driven from a TTY)
 
@@ -112,13 +115,11 @@ into Plasma, take a new snapshot first.
    Run `scripts/check-plasma-intact.sh noctalia` (must exit 0) before logging into niri again. Then run
    `noctalia config validate` with **no argument**, which also reads `~/.local/state/noctalia/settings.toml`; a
    directory argument skips it. On success it always prints `✓ Config is valid`. Pass = exit 0 and no line starting
-   with `WARN` or `ERROR`. This also confirms `source = "custom"`; if it is rejected, set `source = "builtin"` and
-   `builtin = "Tokyo-Night"` in `config.toml`, and update `test_theme_uses_custom_mizu_dark` in
-   `tests/test_noctalia_config.py` to match.
+   with `WARN` or `ERROR`.
 5. **Log into niri with the full config.**
    Do not change the theme in Noctalia's first-run wizard: it writes `~/.local/state/noctalia/settings.toml`, which
-   beats the repo config, and Mizu would silently never appear. Check that the clock shows the Japanese date, both
-   `eDP-1` and `HDMI-A-1` have a bar, Settings → Appearance → Theme → Palette Inspector shows Mizu, screen share works
+   beats the repo config. Check that the clock shows the Japanese date, both `eDP-1` and `HDMI-A-1` have a bar, the
+   colors follow the wallpaper (and the focus ring with them, through `~/.config/niri/colors.kdl`), screen share works
    (Discord), and your Discord login survives a restart (`niri-portals.conf` in the system directory names
    `gnome-keyring` for the `Secret` portal and it is deliberately not installed). Log out, return to the TTY, and run
    `scripts/check-plasma-intact.sh compare` and `scripts/check-plasma-intact.sh noctalia`; both must exit 0.
@@ -137,8 +138,8 @@ rm -r ~/.local/state/noctalia ~/.cache/noctalia
 mv ~/.config/niri/config.kdl.bak.<date> ~/.config/niri/config.kdl
 ```
 
-`sudo pacman -Rns noctalia` removes the shell if you also want the package gone. No template files exist to clean up
-because all templates are off.
+`sudo pacman -Rns noctalia` removes the shell if you also want the package gone. The only rendered template file is
+`~/.config/niri/colors.kdl`; delete it as well (niri's include is optional, so the amber fallback returns).
 
 ## Measure gaming performance
 

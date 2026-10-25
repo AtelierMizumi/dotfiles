@@ -707,3 +707,7 @@ binds {
 debug {
     honor-xdg-activation-with-invalid-serial
 }
+
+// Focus-ring colors from the wallpaper palette, rendered by Noctalia's niri-colors user template. Includes are
+// positional, so this stays after the layout block; optional because the file only exists after the first render.
+include optional=true "colors.kdl"

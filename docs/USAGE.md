@@ -167,7 +167,11 @@ của `noctalia/.config/noctalia/config.toml`; Noctalia tự nạp lại khi lư
 - Sửa `niri/.config/niri/config.kdl`: niri tự nạp lại khi lưu. Kiểm tra trước bằng `niri validate`. Bind mới nên giữ
   quy tắc tối đa 3 phím, và phải thêm vào tài liệu này (test `bash tests/run-all.sh` sẽ nhắc nếu quên).
 - Sửa `noctalia/.config/noctalia/config.toml`: kiểm tra bằng `noctalia config validate` (chạy không đối số; đạt khi
-  thoát 0 và không có dòng `WARN` hay `ERROR`). Đừng bật template hay `sync_color_scheme`: chúng ghi vào file của Plasma.
+  thoát 0 và không có dòng `WARN` hay `ERROR`). Đừng bật template builtin/community hay `sync_color_scheme`: chúng ghi
+  vào file của Plasma. Template duy nhất được phép là `niri-colors`, chỉ ghi `~/.config/niri/colors.kdl`.
+- Màu giao diện lấy từ wallpaper (sơ đồ `faithful`). Đổi wallpaper bằng widget wallpaper trên bar (thư mục
+  `~/Pictures/Wallpapers`: `landscape/`, `anime/`, `cinematic/`), màu bar và viền cửa sổ đổi theo. Đổi sơ đồ:
+  `noctalia msg color-scheme-set wallpaper vibrant` (hoặc `faithful`, `soft`, `m3-content`...).
 - Mỗi lần xong một thay đổi, commit để có thể quay lại.
 
 ## Khi có sự cố

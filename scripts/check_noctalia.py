@@ -10,7 +10,8 @@ merge and reports anything that would let Noctalia write outside its own directo
 
 - the built-in or community templates enabled, or any template id listed (the GTK/Qt/KColorScheme templates write
   gtk-*, kdeglobals and the niri config);
-- a user template that is not explicitly disabled;
+- a user template that is not explicitly disabled, unless it only renders a file under ~/.config/niri/ (which Plasma
+  never reads) and runs no hook;
 - sync_color_scheme not false (upstream default is true; it runs a user-wide gsettings color-scheme write);
 - an [include] table in any layer, which this checker cannot expand (UNSUPPORTED INCLUDE).
 
@@ -72,6 +73,29 @@ def _where(origins: dict[str, str], dotted: str) -> str:
     return origins.get(dotted, UPSTREAM_DEFAULT)
 
 
+NIRI_DIRS = ("~/.config/niri/", "$XDG_CONFIG_HOME/niri/")
+SAFE_TEMPLATE_KEYS = {"input_path", "output_path", "enabled"}
+
+
+def _renders_into_niri_only(table: dict[str, Any]) -> bool:
+    """True for a user template that only writes one file inside the niri config directory and runs no hook.
+
+    Plasma never reads ~/.config/niri, so the wallpaper colors for niri's focus ring may be rendered there. Any other
+    key (post_hook, undo_hook, output_path_dynamic, ...) or target fails closed.
+    """
+    if not set(table) <= SAFE_TEMPLATE_KEYS:
+        return False
+    output = table.get("output_path")
+    if not isinstance(output, str):
+        return False
+    for prefix in NIRI_DIRS:
+        rest = output[len(prefix):] if output.startswith(prefix) else None
+        # config.kdl is a stow symlink into the repo; rendering over it would rewrite the repo file.
+        if rest and ".." not in Path(rest).parts and rest != "config.kdl":
+            return True
+    return False
+
+
 def check(config_dir: Path, settings_toml: Path) -> list[str]:
     """Return one line per violation; an empty list means the merged config is safe for Plasma."""
     merged: dict[str, Any] = {}
@@ -111,7 +135,7 @@ def check(config_dir: Path, settings_toml: Path) -> list[str]:
     user_templates = _get(merged, "theme", "templates", "user")
     if isinstance(user_templates, dict):
         for name, table in user_templates.items():
-            if isinstance(table, dict) and table.get("enabled") is False:
+            if isinstance(table, dict) and (table.get("enabled") is False or _renders_into_niri_only(table)):
                 continue
             prefix = f"theme.templates.user.{name}."
             source = next((src for key, src in origins.items() if key.startswith(prefix)), "unknown")

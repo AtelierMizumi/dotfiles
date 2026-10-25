@@ -75,6 +75,40 @@ class CheckNoctaliaTest(unittest.TestCase):
         self.write_settings('[theme.templates.user.my_app]\nenabled = false\n')
         self.assertEqual(self.problems(), [])
 
+    # A user template may only render a file inside the niri config directory, which Plasma never reads, and may not
+    # run any hook. Every other key or target is reported (fail closed).
+    def test_user_template_into_the_niri_dir_is_ok(self):
+        for output in ("~/.config/niri/colors.kdl", "$XDG_CONFIG_HOME/niri/colors.kdl"):
+            with self.subTest(output=output):
+                self.write_config(
+                    GOOD + f'\n[theme.templates.user.niri-colors]\ninput_path = "templates/niri-colors.kdl"\n'
+                    f'output_path = "{output}"\n'
+                )
+                self.assertEqual(self.problems(), [])
+
+    def test_user_template_outside_the_niri_dir_is_violation(self):
+        # config.kdl is a stow symlink into this repo, so rendering over it would rewrite the repo file.
+        for output in ("~/.config/gtk-3.0/gtk.css", "~/.config/niri/../kdeglobals", "~/.config/niri", "/tmp/x.kdl",
+                       "~/.config/niri/config.kdl", "$XDG_CONFIG_HOME/niri/config.kdl"):
+            with self.subTest(output=output):
+                self.write_config(
+                    GOOD + f'\n[theme.templates.user.t]\ninput_path = "t.kdl"\noutput_path = "{output}"\n'
+                )
+                self.assert_violation("TEMPLATE ENABLED")
+
+    def test_user_template_with_a_hook_is_violation(self):
+        for extra in ('post_hook = "touch ~/x"', 'undo_hook = "rm x"', 'output_path_dynamic = "echo ~/x"'):
+            with self.subTest(extra=extra):
+                self.write_config(
+                    GOOD + '\n[theme.templates.user.t]\ninput_path = "t.kdl"\n'
+                    f'output_path = "~/.config/niri/colors.kdl"\n{extra}\n'
+                )
+                self.assert_violation("TEMPLATE ENABLED")
+
+    def test_user_template_without_output_path_is_violation(self):
+        self.write_config(GOOD + '\n[theme.templates.user.t]\ninput_path = "t.kdl"\n')
+        self.assert_violation("TEMPLATE ENABLED")
+
     def test_settings_toml_sync_true_overrides_repo_false(self):
         self.write_config(GOOD)
         self.write_settings("[theme]\nsync_color_scheme = true\n")

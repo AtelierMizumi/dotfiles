@@ -71,6 +71,17 @@ t_noctalia_started_with_scoped_lc_time() {
   grep -qxF 'spawn-at-startup "env" "LC_TIME=ja_JP.UTF-8" "noctalia"' <<<"$active" || fail "scoped noctalia startup line missing"
 }
 
+# Noctalia renders ~/.config/niri/colors.kdl from the wallpaper palette. Includes are positional, so it must come after
+# the layout block to override the amber fallback, and optional so niri still starts before the first render.
+t_wallpaper_colors_are_included_after_the_layout() {
+  local active include_at layout_at
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  include_at=$(grep -nxF 'include optional=true "colors.kdl"' <<<"$active" | cut -d: -f1)
+  layout_at=$(grep -nE '^layout[[:space:]]*\{' <<<"$active" | cut -d: -f1)
+  [[ -n "$include_at" ]] || fail 'no active top-level include optional=true "colors.kdl"'
+  [[ -n "$layout_at" && "$include_at" -gt "$layout_at" ]] || fail "colors.kdl is included before the layout block"
+}
+
 t_focus_ring_is_amber_2px() {
   local block
   block=$(active_lines "$CONFIG" | awk '/^[[:space:]]*focus-ring[[:space:]]*\{/{in_ring=1} in_ring{print} in_ring && /^[[:space:]]*\}/{exit}')
