@@ -27,7 +27,7 @@ Singleton {
     // then, or a fresh start would overwrite what's on disk with defaults.
     property bool loaded: false
 
-    property bool shown: false       // off until you add it: ipc weathercard toggle (a first run shows only the clock)
+    property bool shown: true
     // The card's style: "classic" (plate, gauges and the forecast) or "minimal" (the plate and
     // one row of the next hours). Both are the same 2 x 2 footprint. Remembered across
     // restarts. Switch it in Settings -> Desktop or with `ipc call weathercard style minimal|classic`.

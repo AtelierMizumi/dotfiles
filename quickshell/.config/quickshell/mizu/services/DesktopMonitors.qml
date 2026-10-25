@@ -41,6 +41,9 @@ Singleton {
     readonly property string fallbackName: {
         if (root.plugged(root.defaultScreen))
             return root.defaultScreen
+        const ext = Quickshell.screens.find(s => !s.name.startsWith("eDP"))
+        if (ext)
+            return ext.name
         return Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""
     }
 

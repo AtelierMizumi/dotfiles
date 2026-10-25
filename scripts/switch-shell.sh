@@ -41,7 +41,7 @@ done
 reload_session() {
   local target_shell="$1"
   if command -v niri >/dev/null 2>&1; then
-    niri msg action reload-config >/dev/null 2>&1 || true
+    niri msg action load-config-file >/dev/null 2>&1 || true
   fi
   if [[ "$target_shell" == "noctalia" ]]; then
     pkill -x quickshell >/dev/null 2>&1 || true
@@ -51,8 +51,13 @@ reload_session() {
     fi
   else
     pkill -x noctalia >/dev/null 2>&1 || true
-    if command -v "$ROOT/niri/.config/niri/scripts/shell-start" >/dev/null 2>&1; then
-      "$ROOT/niri/.config/niri/scripts/shell-start" >/dev/null 2>&1 &
+    pkill -x quickshell >/dev/null 2>&1 || true
+    pkill -x qs >/dev/null 2>&1 || true
+    local start_script="$CONFIG_HOME/niri/scripts/shell-start"
+    if [[ -x "$start_script" ]]; then
+      nohup "$start_script" >/dev/null 2>&1 &
+    elif [[ -x "$ROOT/niri/.config/niri/scripts/shell-start" ]]; then
+      nohup "$ROOT/niri/.config/niri/scripts/shell-start" >/dev/null 2>&1 &
     fi
   fi
 }
@@ -96,7 +101,7 @@ if [[ $dry_run -eq 1 ]]; then
     echo "==> [dry-run] Would install local staged packages from $STAGING_DIR/pkgs"
   fi
   echo "==> [dry-run] Would merge branch smart-shell into main"
-  echo "==> [dry-run] Would run: stow quickshell niri"
+  echo "==> [dry-run] Would run: stow --no-folding -t \"$HOME\" quickshell niri"
   echo "==> [dry-run] Would write 'mizu' to $NIRI_SHELL_FILE"
   echo "==> [dry-run] Would reload niri session to launch mizu"
   echo "==> [dry-run] Complete (no changes made)."
@@ -131,7 +136,7 @@ fi
 # --- Stow Configurations ---
 echo "==> Stowing configuration directories..."
 if command -v stow >/dev/null 2>&1; then
-  (cd "$ROOT" && stow quickshell niri)
+  (cd "$ROOT" && stow --no-folding -t "$HOME" quickshell niri)
 fi
 
 # --- Switch Session to Mizu ---

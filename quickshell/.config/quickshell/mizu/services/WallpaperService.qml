@@ -193,4 +193,30 @@ Singleton {
         repeat: true
         onTriggered: root.random()
     }
+
+    // Lock screen transition stubs
+    readonly property string transitionStyle: "sekaiRing"
+    readonly property int ringVariant: 0
+    readonly property real ringDistortion: 0.0
+    readonly property real ringSpeed: 1.0
+    readonly property real ringWidth: 0.2
+    readonly property real ringColorIntensity: 1.0
+    readonly property vector2d ringCenter: Qt.vector2d(0.5, 0.5)
+    readonly property real starColorIntensity: 1.0
+    readonly property vector2d starCenter: Qt.vector2d(0.5, 0.5)
+    readonly property real starThickness: 1.0
+    readonly property real starPointLength: 1.0
+    readonly property real starCurvature: 1.0
+    readonly property real starElastic: 1.0
+    readonly property real starSpin: 0.0
+    readonly property vector2d blocksDirection: Qt.vector2d(1.0, 1.0)
+    readonly property real blocksBandThickness: 1.0
+    readonly property real blocksBlockSize: 32.0
+    readonly property real blocksStagger: 0.0
+    readonly property int transitionEasing: Easing.InOutQuad
+
+    function transitionMsFor(style) { return 600 }
+    function transitionLinearFor(style) { return true }
+    function lockShaderStemFor(style) { return "ring_lock" }
+    function rollLockStyle() {}
 }

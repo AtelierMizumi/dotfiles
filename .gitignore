@@ -22,3 +22,4 @@ __pycache__/
 *.swp
 *SESSION-LIMIT*
 .DS_Store
+quickshell/.config/quickshell/mizu-user/
