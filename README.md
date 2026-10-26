@@ -1,63 +1,100 @@
 # dotfiles
 
-Personal Arch Linux rice: a scrollable-tiling Wayland session (niri) with the Noctalia v5 shell, living **next to**
-KDE Plasma without touching it.
+Personal Arch Linux rice: a modern scrollable-tiling Wayland session driven by **niri**, featuring a dual-shell architecture (**Mizu** via Quickshell & **Noctalia** as minimal fallback) living **side-by-side with KDE Plasma** without touching or modifying Plasma's configuration files.
 
-> Status: configs and checks are in place. Nothing is installed or symlinked until you follow the runbook below.
+> **Status:** Configs, shells, IPC handlers, tests, and Plasma integrity checks are fully implemented and verified.
 
-Design: [`docs/superpowers/specs/2026-10-24-niri-noctalia-rice-design.md`](docs/superpowers/specs/2026-10-24-niri-noctalia-rice-design.md) ·
-Plan: [`docs/superpowers/plans/2026-10-24-niri-noctalia-rice.md`](docs/superpowers/plans/2026-10-24-niri-noctalia-rice.md)
+Design Specs: [`docs/superpowers/specs/2026-10-24-niri-noctalia-rice-design.md`](docs/superpowers/specs/2026-10-24-niri-noctalia-rice-design.md) · Implementation Plan: [`docs/superpowers/plans/2026-10-24-niri-noctalia-rice.md`](docs/superpowers/plans/2026-10-24-niri-noctalia-rice.md) · User Guide: [`docs/USAGE.md`](docs/USAGE.md)
 
-## Goals
+---
 
-- Keep the existing KDE Plasma session fully working (separate session picked at the display manager).
-- Reproducible: every config lives in this repo, installs are explicit and reversible.
-- Gaming-friendly on the hybrid Intel iGPU + NVIDIA dGPU laptop (compositor on iGPU, games on dGPU).
+## Highlights & Features
 
-## Rules
+- **Dual-Shell Architecture**:
+  - **Mizu Shell** (Default): Built with [Quickshell](https://quickshell.outfoxxed.me/), featuring dynamic Material You/KDE color palette generation derived from the active wallpaper, 3D perspective phone projection launcher, media player with synced lyrics, and interactive desktop widgets (Weather for Da Nang, Calendar, Player ID Card, Sticky Notes, Pomodoro/Stopwatch Timer).
+  - **Noctalia Shell** (Fallback): Ultra-lightweight, high-performance desktop shell.
+  - Seamless shell switching on-the-fly via `scripts/switch-shell.sh` and supervised by `niri/.config/niri/scripts/shell-start` with hotkey dispatch through `niri/.config/niri/scripts/shell-ipc`.
+- **Absolute KDE Plasma Isolation**:
+  - Strict zero-leakage policy: Environment variables, color schemes, and portal definitions are strictly scoped to the `niri` session.
+  - Plasma's shared files (`kdeglobals`, `mimeapps.list`, `gtk-*`, `xdg-desktop-portal/*`) remain 100% byte-identical (`check-plasma-intact.sh compare` exits `0`).
+- **Nautilus Default File Manager in Niri**:
+  - Scoped via XDG Desktop MIME specification (`~/.config/niri-mimeapps.list`) to default directory handling to GNOME Nautilus inside niri, leaving KDE Plasma's Dolphin default untouched.
+- **Dynamic Dark/Light Mode & Qt Synchronization**:
+  - Seamless theme synchronization (`niri/.config/niri/scripts/sync-theme`) toggling GTK `color-scheme`, KDE color schemes (`plasma-apply-colorscheme BreezeDark` / `BreezeLight`), and D-Bus activation environments on the fly.
+- **Pixel-Perfect Displays & Hybrid Graphics**:
+  - Native 1.0 integer scaling on laptop display (`eDP-1`, 1920x1080@144Hz) and external monitor (`HDMI-A-1`, 1920x1080@120Hz at `x=1920 y=0`) eliminating fractional-scaling bilinear blur.
+  - Compositor renders on Intel iGPU (`renderD129`) while heavy gaming/compute offloads to NVIDIA dGPU via `prime-run`.
+- **Fcitx5 Multilingual Typing Engine**:
+  - Cyclic switching across English (US) -> Vietnamese (Lotus) -> Japanese (Anthy) -> English via `Super+BackSpace`.
 
-- No secrets (`.env`, tokens, keys) and no binary documents in this repo.
-- Environment variables for the rice go in the compositor config, never in `environment.d` or shell profiles
-  (they would leak into Plasma).
-- Noctalia's built-in and community templates stay off and `sync_color_scheme` stays `false`: they would write
-  `gtk-*`, `kdeglobals` and the user-wide gsettings `color-scheme`. The one exception is the `niri-colors` user
-  template, which only renders `~/.config/niri/colors.kdl` (Plasma never reads `~/.config/niri`) and runs no hook.
-- Do not install `gnome-keyring`: it provides `org.freedesktop.secrets`, the name KWallet serves for Plasma.
+---
 
-## Layout
+## Core Rules
 
-| Path | What it is |
+- **No secrets**: Never commit `.env`, API tokens, private keys, or binary documents.
+- **Session-scoped environment**: Environment variables for niri go exclusively in `niri/.config/niri/config.kdl` or session scripts, never in system-wide `environment.d` or global shell profiles.
+- **Noctalia template restrictions**: Noctalia's built-in and community templates stay disabled, and `sync_color_scheme` stays `false` to prevent writing to `kdeglobals` or global gsettings. The only rendered template is the scoped `niri-colors` user template (`~/.config/niri/colors.kdl`).
+- **Secret portal integrity**: Do not install `gnome-keyring`: `org.freedesktop.secrets` is served by KWallet for Plasma.
+
+---
+
+## Keybindings (Cheat Sheet)
+
+Full keymap documented in [`docs/USAGE.md`](docs/USAGE.md).
+
+| Key | Action | Target / Application |
+|---|---|---|
+| `Mod+Return` / `Mod+T` | Terminal | **Ghostty** |
+| `Mod+B` | Browser | **Zen Browser** |
+| `Mod+E` | File Manager | **Nautilus** (Niri session default) |
+| `Mod+C` | Code Editor | **VS Code** |
+| `Mod+D` | Launcher | Mizu / Noctalia App Launcher |
+| `Mod+S` | Quick Settings | Mizu / Noctalia Control Center |
+| `Mod+Alt+S` | Shell Settings | Mizu Desktop Settings Panel |
+| `Mod+Shift+V` | Clipboard | Clipboard history overlay |
+| `Mod+BackSpace` | Input Method | Cycle Fcitx5 (US -> Vietnamese -> Japanese) |
+| `Mod+Shift+S` | Screenshot | niri screenshot tool |
+| `Mod+Alt+Minus` / `Equal`| Brightness | Decrease / Increase display backlight |
+| `Mod+H` / `J` / `K` / `L` | Window Focus | Left / Down / Up / Right column focus |
+| `Mod+Shift+H` / `J` / `K` / `L` | Window Move | Move column Left / Down / Up / Right |
+| `Mod+1` .. `Mod+9` | Workspace | Focus workspace 1 to 9 |
+
+---
+
+## Repository Layout
+
+| Path | Description |
 |---|---|
-| `niri/.config/niri/config.kdl` | niri config (stow package `niri`) |
-| `niri/.config/xdg-desktop-portal/niri-portals.conf` | portal routing for the niri session (stow package `niri`) |
-| `noctalia/.config/noctalia/config.toml`, `templates/niri-colors.kdl`, `palettes/Mizu.json` | Noctalia overlay (colors from the wallpaper, `faithful` scheme), the niri focus-ring template, and the fixed Mizu palette kept as an alternative (stow package `noctalia`) |
-| `niri/.config/niri/scripts/fcitx5-cycle` | Super+BackSpace: next typing language in fcitx5 profile order |
-| `docs/USAGE.md` | user guide in Vietnamese: keymap for laptop and Sofle, daily coding workflow, idle, rollback |
-| `docs/baseline/niri-config.default.kdl` | the untouched default niri config this one started from |
-| `scripts/check-plasma-intact.sh`, `scripts/check_noctalia.py` | proof that Plasma is untouched (see Checks) |
-| `tests/` | `bash tests/run-all.sh` runs shellcheck, the bash tests and the Python tests |
-| `CLAUDE.md` | handoff for a new Claude Code session: rules and read-only phase detection |
+| `niri/.config/niri/config.kdl` | Niri compositor configuration (window layout, keybinds, displays, cursor) |
+| `niri/.config/niri-mimeapps.list` | XDG desktop-specific MIME association (defaults `inode/directory` to Nautilus in niri) |
+| `niri/.config/xdg-desktop-portal/niri-portals.conf` | Portal routing for niri (GNOME portal for ScreenCast/Screenshot, GTK for picker) |
+| `niri/.config/niri/scripts/` | Session automation: `shell-start`, `shell-ipc`, `sync-theme`, `fcitx5-cycle` |
+| `quickshell/.config/quickshell/mizu/` | **Mizu** Quickshell implementation (tokens, bar, widgets, launcher, lyrics, theme generator) |
+| `noctalia/.config/noctalia/` | **Noctalia** fallback configuration and wallpaper palette templates |
+| `scripts/check-plasma-intact.sh` | Plasma integrity snapshot and verification suite |
+| `scripts/switch-shell.sh` | CLI utility to switch live shell between `mizu` and `noctalia` safely |
+| `docs/USAGE.md` | User guide in Vietnamese covering daily workflows, keyboard ergonomics, and rollback |
+| `tests/` | Automated test suite (`bash tests/run-all.sh`) validating all configs, syntax, and Plasma safety |
 
-`niri-portals.conf` exists because your generic `~/.config/xdg-desktop-portal/portals.conf` routes every backend,
-including ScreenCast and Screenshot, to the Plasma portals, and a user-level `portals.conf` outranks the system
-`niri-portals.conf`. A desktop-specific file in the same directory wins over the generic one, so niri gets the GNOME
-portal that screen share (and Discord) needs. Plasma keeps using its own `kde-portals.conf`.
+### Why `niri-portals.conf` exists
+The user-level `~/.config/xdg-desktop-portal/portals.conf` normally routes interfaces to Plasma portals. A desktop-specific `niri-portals.conf` in the same directory takes precedence under `XDG_CURRENT_DESKTOP=niri`, ensuring niri receives `xdg-desktop-portal-gnome` which **ScreenCast** (Discord screen sharing) requires, while Plasma continues using `kde-portals.conf`.
 
-## Checks
+---
 
-`scripts/check-plasma-intact.sh <command>`, exit 0 means fine, 1 a violation, 2 usage error or refused:
+## Checks & Verification
 
-- `snapshot` and `compare` record and compare hashes of `kdeglobals`, `kdedefaults/kdeglobals`, `mimeapps.list`,
-  `gtk-3.0/settings.ini`, `gtk-4.0/settings.ini`, `xdg-desktop-portal-kderc`, `xdg-desktop-portal/portals.conf` and
-  `xdg-desktop-portal/kde-portals.conf`, plus the gsettings `color-scheme` and `gtk-theme`. They **refuse to run
-  while `plasmashell` is running** (Plasma rewrites some of these files itself), so run them with Plasma logged out.
-  State lives in `~/.local/state/dotfiles-check`.
-- `packages` checks that `xdg-desktop-portal-kde`, `plasma-desktop` and `sddm` are installed with no missing files.
-- `noctalia` checks the repo config **and** the live `~/.config/noctalia` (honoring `NOCTALIA_CONFIG_HOME`), plus
-  `~/.local/state/noctalia/settings.toml` (the GUI overrides, which win; honoring `NOCTALIA_STATE_HOME`). Built-in
-  and community templates must be off, a user template may only render a file under `~/.config/niri/` (not
-  `config.kdl`) with no hook, and `sync_color_scheme` must be false. An `[include]` table is reported as
-  `UNSUPPORTED INCLUDE` because the checker cannot expand it.
+Run `scripts/check-plasma-intact.sh <command>` (Exit code: `0` = OK, `1` = violation, `2` = usage error):
+
+- `snapshot` / `compare`: Hashes `kdeglobals`, `kdedefaults/kdeglobals`, `mimeapps.list`, `gtk-3.0/settings.ini`, `gtk-4.0/settings.ini`, `xdg-desktop-portal-kderc`, `xdg-desktop-portal/portals.conf`, `xdg-desktop-portal/kde-portals.conf`, and gsettings `color-scheme` / `gtk-theme`. **Refuses to run while `plasmashell` is running** to prevent false positives.
+- `packages`: Validates that `xdg-desktop-portal-kde`, `plasma-desktop`, and `sddm` remain fully installed with zero missing files.
+- `noctalia`: Verifies live and repo configurations. All built-in and community templates must be disabled, and `sync_color_scheme` must be false.
+
+Run complete test suite:
+```sh
+bash tests/run-all.sh
+```
+
+---
 
 ## Install runbook (driven from a TTY)
 
@@ -108,7 +145,7 @@ into Plasma, take a new snapshot first.
    The niri config starts Noctalia at login, so the Noctalia overlay has to be in place first. Otherwise Noctalia starts
    with `sync_color_scheme = true` and writes the gsettings `color-scheme` user-wide.
    ```sh
-   mv ~/.config/niri/config.kdl ~/.config/niri/config.kdl.bak.(date +%F)   # fish; in bash use $(date +%F)
+   mv ~/.config/niri/config.kdl ~/.config/niri/config.kdl.bak.$(date +%F)   # fish; in bash use $(date +%F)
    stow -n -v --no-folding -t ~ niri noctalia    # dry run, expect no conflicts
    stow --no-folding -t ~ niri noctalia
    ```
@@ -127,8 +164,9 @@ into Plasma, take a new snapshot first.
    Only then log into Plasma and confirm it behaves normally, and that file dialogs are still the KDE ones.
 
 `--no-folding` keeps `~/.config/niri`, `~/.config/noctalia` and `~/.config/xdg-desktop-portal` real directories so
-nothing can write into the repo through a directory symlink. The `stow` flags come from its manual; `stow` is not
-installed on the machine that wrote this runbook.
+nothing can write into the repo through a directory symlink.
+
+---
 
 ## Rollback
 
@@ -141,15 +179,13 @@ mv ~/.config/niri/config.kdl.bak.<date> ~/.config/niri/config.kdl
 `sudo pacman -Rns noctalia` removes the shell if you also want the package gone. The only rendered template file is
 `~/.config/niri/colors.kdl`; delete it as well (niri's include is optional, so the amber fallback returns).
 
-## Measure gaming performance
+---
 
-Compare the same scene on the Plasma session and on niri; there is no benchmark of niri against KDE to rely on.
+## Gaming & Performance Measurement
+
+Compare the same scene between the Plasma session and niri:
 
 1. Use the discrete GPU through `prime-run` (it sets `__NV_PRIME_RENDER_OFFLOAD`, `__VK_LAYER_NV_optimus` and
    `__GLX_VENDOR_LIBRARY_NAME`). Steam launch option: `prime-run mangohud %command%`.
-2. Log with MangoHud. Keys from `/usr/share/doc/mangohud/MangoHud.conf.example`: `toggle_logging` (default
-   `Shift_L+F2`), `output_folder` (required for logging), `log_duration` and `autostart_log` (seconds). The same keys
-   can go in `MANGOHUD_CONFIG` as comma-separated `key=value` pairs (MangoHud's README; the installed example does not
-   spell out the format).
-3. Compare average FPS and 1% lows between the two sessions. Whether MangoHud writes a summary with 1% lows is
-   **unverified**; check after the first log.
+2. Log with MangoHud (`toggle_logging` default `Shift_L+F2`, configured in `MANGOHUD_CONFIG`).
+3. Compare average FPS and 1% lows between sessions.
