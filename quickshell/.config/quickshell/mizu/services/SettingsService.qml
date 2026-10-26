@@ -112,7 +112,8 @@ Singleton {
         "bar.scrollHints": true,        // a small marker on modules that react to the scroll wheel
         "tray.scroll": true,            // the wheel over a tray icon is sent to the app
         // ===== Weather =====
-        "weather.location": "Ho Chi Minh City", // a city name ("Paris", "Springfield, Illinois") or lat,lon. No IP lookup: "" asks nobody.
+        // VKU Campus, Hoa Hai, Ngu Hanh Son, Da Nang (OSM way/1169542373: 15.97262°N, 108.24891°E)
+        "weather.location": "15.9726, 108.2489 (VKU, Da Nang)", // lat,lon (label) or city name. If empty, falls back to GeoIP.
         "weather.view": "days",         // the popup's second row: days | hourly
         // Stars stuck on days in the calendar popup: "2026-10-09:2,..." (date : attribute colour 1-5).
         "calendar.marks": "",

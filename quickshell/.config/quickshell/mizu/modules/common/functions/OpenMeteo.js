@@ -24,19 +24,22 @@ function pad(n) {
 }
 
 // What was typed as the location (SettingsService "weather.location"):
-//   ""                      -> { kind: "none" }
-//   "Majayjay"              -> { kind: "name", name: "Majayjay", qualifier: "" }
-//   "Springfield, Illinois" -> { kind: "name", name: "Springfield", qualifier: "Illinois" }
-//   "14.15, 121.47"         -> { kind: "coords", lat: 14.15, lon: 121.47 }
+//   ""                               -> { kind: "none" }
+//   "Majayjay"                       -> { kind: "name", name: "Majayjay", qualifier: "" }
+//   "Springfield, Illinois"          -> { kind: "name", name: "Springfield", qualifier: "Illinois" }
+//   "14.15, 121.47"                  -> { kind: "coords", lat: 14.15, lon: 121.47, label: "" }
+//   "15.9726, 108.2489 (VKU, Da Nang)" -> { kind: "coords", lat: 15.9726, lon: 108.2489, label: "VKU, Da Nang" }
 function parseQuery(text) {
     var s = String(text === undefined || text === null ? "" : text).trim();
     if (s === "")
         return { kind: "none" };
-    var m = /^(-?\d{1,2}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)$/.exec(s);
+    var m = /^(-?\d{1,2}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)(?:\s*(?:[,;\(]\s*|\s+)(.*?)\)?)?$/.exec(s);
     if (m) {
         var lat = parseFloat(m[1]), lon = parseFloat(m[2]);
-        if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180)
-            return { kind: "coords", lat: lat, lon: lon };
+        if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+            var label = m[3] ? m[3].replace(/[()]/g, "").trim() : "";
+            return { kind: "coords", lat: lat, lon: lon, label: label };
+        }
     }
     var cut = s.indexOf(",");
     if (cut < 0)

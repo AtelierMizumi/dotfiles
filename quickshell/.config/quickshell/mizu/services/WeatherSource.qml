@@ -110,7 +110,7 @@ Scope {
     // True while a request is in flight; failed is true when the last try
     // didn't produce anything usable (the previous readings stay on show, unless
     // the place itself was the problem).
-    readonly property bool loading: geocode.running || fetch.running
+    readonly property bool loading: geocode.running || fetch.running || geoip.running
     property bool failed: false
     property string problemText: ""
     property double lastFetchMs: 0
@@ -160,6 +160,7 @@ Scope {
             root.restartPending = true
             geocode.running = false
             fetch.running = false
+            geoip.running = false
         } else {
             root.refresh()
         }
@@ -184,13 +185,13 @@ Scope {
             return
         }
         if (q.kind === "coords") {
-            root.setPlace({ lat: q.lat, lon: q.lon, label: OM.coordLabel(q.lat, q.lon) })
+            root.setPlace({ lat: q.lat, lon: q.lon, label: q.label || OM.coordLabel(q.lat, q.lon) })
         } else if (q.kind === "name") {
             root.geocodeUrl = OM.geocodeUrl(q.name)
             root.pendingQuery = q
             geocode.running = true
         } else {
-            root.fail("Set a city in Settings")
+            geoip.running = true
         }
     }
     property var pendingQuery: null
@@ -323,6 +324,34 @@ Scope {
         onExited: (code, status) => {
             if (code !== 0 && !root.restartPending && !root.failed)
                 root.fail("Couldn't reach Open-Meteo")
+            root.processEnded()
+        }
+    }
+
+    // Fallback: detect city/coords via GeoIP when no location is configured in Settings.
+    Process {
+        id: geoip
+        command: ["curl", "-s", "-m", "5", "http://ip-api.com/json"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (root.restartPending)
+                    return
+                try {
+                    const data = JSON.parse(text)
+                    if (data && data.lat !== undefined && data.lon !== undefined) {
+                        const city = data.city || data.regionName || ""
+                        const country = data.country || ""
+                        const label = city && country ? city + ", " + country : (city || country || OM.coordLabel(data.lat, data.lon))
+                        root.setPlace({ lat: Number(data.lat), lon: Number(data.lon), label: label })
+                        return
+                    }
+                } catch (e) {}
+                root.fail("Set a city in Settings")
+            }
+        }
+        onExited: (code, status) => {
+            if (code !== 0 && !root.restartPending && !root.failed && !root.place)
+                root.fail("Set a city in Settings")
             root.processEnded()
         }
     }
