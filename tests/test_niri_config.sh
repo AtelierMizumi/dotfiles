@@ -171,7 +171,7 @@ t_no_bind_needs_more_than_three_keys() {
 
 t_app_binds() {
   local pair combo text
-  for pair in 'Mod+T|spawn "ghostty"' 'Mod+Return|spawn "ghostty"' 'Mod+B|spawn "zen-browser"' 'Mod+E|spawn "dolphin"' 'Mod+C|spawn "code"'; do
+  for pair in 'Mod+T|spawn "ghostty"' 'Mod+Return|spawn "ghostty"' 'Mod+B|spawn "zen-browser"' 'Mod+E|spawn "nautilus"' 'Mod+C|spawn "code"'; do
     combo=${pair%%|*}
     text=${pair#*|}
     has_bind "$combo" "$text" || fail "$combo does not run $text"
@@ -248,10 +248,10 @@ t_orca_bind_removed() {
 t_outputs_mirror_the_plasma_layout() {
   local active
   active=$(active_lines "$CONFIG") || fail "config unreadable"
-  awk '/^output "eDP-1"[[:space:]]*\{/ { inb = 1 } inb && /scale 1\.25/ { s = 1 } inb && /position x=0 y=0/ { p = 1 } inb && /^\}/ { exit } END { exit !(s && p) }' <<<"$active" ||
-    fail "output eDP-1 is not scale 1.25 at x=0 y=0"
-  awk '/^output "HDMI-A-1"[[:space:]]*\{/ { inb = 1 } inb && /scale 1[[:space:]]*$/ { s = 1 } inb && /position x=1536 y=0/ { p = 1 } inb && /^\}/ { exit } END { exit !(s && p) }' <<<"$active" ||
-    fail "output HDMI-A-1 is not scale 1 at x=1536 y=0"
+  awk '/^output "eDP-1"[[:space:]]*\{/ { inb = 1 } inb && /scale 1[[:space:]]*$/ { s = 1 } inb && /position x=0 y=0/ { p = 1 } inb && /^\}/ { exit } END { exit !(s && p) }' <<<"$active" ||
+    fail "output eDP-1 is not scale 1 at x=0 y=0"
+  awk '/^output "HDMI-A-1"[[:space:]]*\{/ { inb = 1 } inb && /scale 1[[:space:]]*$/ { s = 1 } inb && /position x=1920 y=0/ { p = 1 } inb && /^\}/ { exit } END { exit !(s && p) }' <<<"$active" ||
+    fail "output HDMI-A-1 is not scale 1 at x=1920 y=0"
   ! grep -qE '^[[:space:]]*mode ' <<<"$active" || fail "a fixed output mode is set; the external monitors change with the place"
 }
 

@@ -110,13 +110,13 @@ input {
 // pixels wide) with the external monitor to its right. No `mode` on purpose: the external monitor depends on where
 // the laptop is used, and without a mode niri picks the highest refresh rate for the monitor's own resolution.
 output "eDP-1" {
-    scale 1.25
+    scale 1
     position x=0 y=0
 }
 
 output "HDMI-A-1" {
     scale 1
-    position x=1536 y=0
+    position x=1920 y=0
 }
 
 // Same cursor as Plasma (kcminputrc: size 36, breeze_cursors).
@@ -414,7 +414,7 @@ binds {
     Mod+T hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
     Mod+Return hotkey-overlay-title=null { spawn "ghostty"; }
     Mod+B hotkey-overlay-title="Open the Browser: zen" { spawn "zen-browser"; }
-    Mod+E hotkey-overlay-title="Open the File Manager: dolphin" { spawn "dolphin"; }
+    Mod+E hotkey-overlay-title="Open the File Manager: nautilus" { spawn "nautilus"; }
     Mod+C hotkey-overlay-title="Open the Editor: VS Code" { spawn "code"; }
 
     // Typing language. Super+BackSpace cycles every engine of the fcitx5 group in profile order (keyboard-us ->
