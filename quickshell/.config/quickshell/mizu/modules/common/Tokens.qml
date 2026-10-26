@@ -193,4 +193,14 @@ Singleton {
         running: !root.loaded
         onTriggered: file.reload()
     }
+
+    Process {
+        id: themeSync
+        command: [Quickshell.env("HOME") + "/.config/niri/scripts/sync-theme", root.mode]
+    }
+
+    onModeChanged: {
+        if (root.loaded)
+            themeSync.running = true
+    }
 }

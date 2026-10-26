@@ -33,6 +33,9 @@ fi
 
 # LC_TIME is set for the shell process only, so the clock shows Japanese weekday names and Plasma is unaffected.
 # QT_QPA_PLATFORMTHEME defaults to kde so Quickshell and apps launched from it resolve Breeze icons properly under niri.
+dbus-update-activation-environment --systemd QT_QPA_PLATFORMTHEME="${QT_QPA_PLATFORMTHEME:-kde}" 2>/dev/null || true
+"${XDG_CONFIG_HOME:-$HOME/.config}/niri/scripts/sync-theme" 2>/dev/null || true
+
 child=0
 trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 0' TERM INT HUP
 
