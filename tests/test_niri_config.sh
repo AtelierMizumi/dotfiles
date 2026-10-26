@@ -272,6 +272,15 @@ t_editors_open_full_width() {
   window_rule_has 'app-id=r#"^([Cc]ode|[Aa]ntigravity)$"#' 'default-column-width { proportion 1.0; }' || fail "no window-rule opening VS Code and Antigravity full width"
 }
 
+t_steam_windows_float_and_notifications_corner() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  grep -qF 'match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#' <<<"$active" || fail "no steam notification window rule"
+  grep -qF 'default-floating-position x=16 y=16 relative-to="bottom-right"' <<<"$active" || fail "steam notifications not positioned in bottom-right"
+  grep -qF 'open-focused false' <<<"$active" || fail "steam notifications steal focus"
+  grep -qF 'exclude title=r#"^Steam$"#' <<<"$active" || fail "steam popups not floating"
+}
+
 t_no_env_leak() {
   local active count
   [[ -f "$CONFIG" ]] || fail "config missing"
