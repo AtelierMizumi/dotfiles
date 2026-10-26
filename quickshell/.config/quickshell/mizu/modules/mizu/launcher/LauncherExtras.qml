@@ -384,6 +384,7 @@ Item {
             case "calc": return calcCard
             case "clip": return clipCard
             case "emoji": return emojiCard
+            case "web": return webCard
             }
             return null
         }
@@ -445,6 +446,20 @@ Item {
                     extras.typeText(emoji)
                 root.doneRequested()
             }
+        }
+    }
+
+    Component {
+        id: webCard
+        WebCard {
+            arg: extras.arg
+            engine: extras.engine
+            suggestions: extras.suggestions
+            onOpenRequested: url => {
+                extras.openUrl(url)
+                root.doneRequested()
+            }
+            onEngineChosen: index => extras.engineOverride = index
         }
     }
 

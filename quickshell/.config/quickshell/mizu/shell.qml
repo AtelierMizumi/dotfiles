@@ -262,6 +262,8 @@ ShellRoot {
     property bool weatherCardResetRequested: false
     property bool calendarCardResetRequested: false
     property bool lyricsResetRequested: false
+    property bool userCardResetRequested: false
+    property bool notesResetRequested: false
 
     // Todo Widget
     FocusGate {
@@ -377,6 +379,44 @@ ShellRoot {
         }
     }
 
+    // User Card Widget
+    FocusGate {
+        id: usercardGate
+        widgetId: "usercard"
+        unloads: true
+        screenName: EditMode.homeScreen(UserCardService.screenName)
+    }
+
+    LazyLoader {
+        id: userCardWidgetLoader
+        active: shellRoot.woke(5) && shellRoot.widgetsAllowed && ((UserCardService.loaded && UserCardService.shown && !usercardGate.gone) || EditMode.active || shellRoot.userCardResetRequested)
+        UserCardWidget {}
+    }
+
+    Variants {
+        model: WidgetClones.screens["usercard"] ?? []
+
+        delegate: LazyLoader {
+            id: clUserCardWidget
+            required property string modelData
+            active: shellRoot.woke(5) && shellRoot.widgetsAllowed && UserCardService.loaded && UserCardService.shown
+            UserCardWidget { clone: true; monitor: clUserCardWidget.modelData }
+        }
+    }
+
+    // Sticky Notes Widget
+    LazyLoader {
+        id: stickyNotesWidgetLoader
+        active: shellRoot.woke(7) && shellRoot.widgetsAllowed && NotesService.loaded && (NotesService.shown || EditMode.active || shellRoot.notesResetRequested)
+        StickyNotesWidget { pinnedLayer: false }
+    }
+
+    LazyLoader {
+        id: stickyNotesPinnedLoader
+        active: shellRoot.woke(7) && shellRoot.widgetsAllowed && NotesService.loaded && NotesService.shown && NotesService.pinnedCount > 0
+        StickyNotesWidget { pinnedLayer: true }
+    }
+
     // Widget IPCs
     IpcHandler {
         target: "todo"
@@ -463,5 +503,49 @@ ShellRoot {
             WidgetClones.clearAll("lyrics")
             shellRoot.lyricsResetRequested = false
         }
+    }
+
+    IpcHandler {
+        target: "usercard"
+        function toggle(): void { UserCardService.setShown(!UserCardService.shown) }
+        function show(): void { UserCardService.setShown(true) }
+        function hide(): void { UserCardService.setShown(false) }
+        function resetPosition(): void {
+            shellRoot.userCardResetRequested = true
+            if (userCardWidgetLoader.item) userCardWidgetLoader.item.resetPosition()
+            WidgetClones.clearAll("usercard")
+            shellRoot.userCardResetRequested = false
+        }
+    }
+
+    IpcHandler {
+        target: "notes"
+        function toggle(): void { NotesService.setShown(!NotesService.shown) }
+        function show(): void { NotesService.setShown(true) }
+        function hide(): void { NotesService.setShown(false) }
+        function add(text: string): void { NotesService.add(text) }
+        function create(): void { NotesService.add("") }
+        function remove(id: string): void { NotesService.remove(id) }
+        function count(): int { return NotesService.count }
+        function resetPosition(): void {
+            shellRoot.notesResetRequested = true
+            if (stickyNotesWidgetLoader.item) stickyNotesWidgetLoader.item.resetPosition()
+            shellRoot.notesResetRequested = false
+        }
+    }
+
+    IpcHandler {
+        target: "timer"
+        function toggleTimer(): void { TimerService.toggleTimer() }
+        function resetTimer(): void { TimerService.resetTimer() }
+        function setTimerMinutes(m: int): void { TimerService.setTimerMinutes(m) }
+        function addTimerMinute(): void { TimerService.addTimerMinute() }
+        function toggleStopwatch(): void { TimerService.toggleStopwatch() }
+        function resetStopwatch(): void { TimerService.resetStopwatch() }
+        function lapStopwatch(): void { TimerService.lapStopwatch() }
+        function togglePomodoro(): void { TimerService.togglePomodoro() }
+        function resetPomodoro(): void { TimerService.resetPomodoro() }
+        function nextPhase(): void { TimerService.nextPhase(false) }
+        function status(): string { return (TimerService.shownMode !== "" ? TimerService.shownMode : "idle") + ": " + TimerService.shownText }
     }
 }

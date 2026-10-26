@@ -210,5 +210,21 @@ SettingsPage {
             checked: LyricsService.hideNotes
             onToggled: LyricsService.setHideNotes(!LyricsService.hideNotes)
         }
+
+        SettingToggle {
+            icon: "badge"
+            label: "User card"
+            detail: "Player ID card with avatar, system info, uptime, and daily progress lane"
+            checked: UserCardService.shown
+            onToggled: UserCardService.setShown(!UserCardService.shown)
+        }
+
+        SettingToggle {
+            icon: "sticky_note_2"
+            label: "Sticky notes"
+            detail: "Desktop sticky notes with washi tapes, color chips, and pinning"
+            checked: NotesService.shown
+            onToggled: NotesService.setShown(!NotesService.shown)
+        }
     }
 }
