@@ -914,7 +914,12 @@ PanelWindow {
                             Connections {
                                 target: win
                                 function onSecsChanged() {
-                                    kripple.cy = kstage.height / 2 + (win.secs % 2 === 0 ? -14 : 14)
+                                    // The ripple at 60 fps restarted every second and kept
+                                    // the render thread from ever sleeping; it rides on the
+                                    // minute now — the diamonds still take turns each second.
+                                    if (win.secs !== 0)
+                                        return
+                                    kripple.cy = kstage.height / 2 - 14
                                     krippleAnim.restart()
                                 }
                             }

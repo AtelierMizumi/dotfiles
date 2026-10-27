@@ -404,8 +404,12 @@ PanelWindow {
     // marker shrinks away in 0.26 s, the diamonds fly for 0.6 s.
     readonly property bool animating: win.demo || (win.lines.length > 0 && win.clockT < win.songEnd + 3)
 
-    FrameAnimation {
+    // 30 Hz: nothing here reads a frame-accurate clock, and a per-frame `now`
+    // re-laid the words out 60 times a second on the desktop.
+    Timer {
         running: win.live && win.animating && (win.demo || win.playing)
+        interval: 33
+        repeat: true
         onTriggered: win.now = Date.now()
     }
 
