@@ -176,6 +176,7 @@ PanelWindow {
     property bool hoverWin: false
     readonly property bool popupOpen: win.trayOpen || trayPopups.showing || win.batteryPopupOpen
         || win.resourcePopupOpen || win.calendarPopupOpen || win.weatherPopupOpen || win.mediaPopupOpen
+        || win.clockPopupOpen
     readonly property bool revealed: !win.autoHide || win.editing || win.hoverWin || win.popupOpen
         || hideGrace.running || peekHold.running
     // How deep the line on the edge is, real pixels.
@@ -346,6 +347,7 @@ PanelWindow {
     property bool calendarPopupOpen: false
     property bool weatherPopupOpen: false
     property bool mediaPopupOpen: false
+    property bool clockPopupOpen: false
 
     function closePopups() {
         trayOpen = false
@@ -364,6 +366,7 @@ PanelWindow {
         calendarPopupOpen = false
         weatherPopupOpen = false
         mediaPopupOpen = false
+        clockPopupOpen = false
         win[name] = !wasOpen
     }
     function toggleMediaPopup() { togglePopup("mediaPopupOpen") }
@@ -371,6 +374,7 @@ PanelWindow {
     function toggleResourcePopup() { togglePopup("resourcePopupOpen") }
     function toggleCalendarPopup() { togglePopup("calendarPopupOpen") }
     function toggleWeatherPopup() { togglePopup("weatherPopupOpen") }
+    function toggleClockPopup() { togglePopup("clockPopupOpen") }
 
     // The media panel under the media pill: a card per player.
     LazyLoader {
@@ -433,6 +437,25 @@ PanelWindow {
             anchorItem: statusBar.dateToggle
             today: clock.date
             onCloseRequested: win.calendarPopupOpen = false
+        }
+    }
+
+    // The clock card under the clock pill: its own SystemClock (seconds), the
+    // timezone it shows is the card's own.
+    LazyLoader {
+        id: clockPopupLazy
+        property bool want: win.clockPopupOpen
+        property bool seen: false
+        onWantChanged: if (want) seen = true
+        active: seen
+
+        ClockPopup {
+            property bool ready: false
+            Component.onCompleted: Qt.callLater(() => ready = true)
+            open: clockPopupLazy.want && ready
+            parentWindow: win
+            anchorItem: statusBar.clockToggle
+            onCloseRequested: win.clockPopupOpen = false
         }
     }
 
@@ -664,6 +687,7 @@ PanelWindow {
                 clockText: win.formatClock(clock.date)
                 dateText: win.formatDate(clock.date)
                 onDateClicked: win.toggleCalendarPopup()
+                onClockClicked: win.toggleClockPopup()
                 scaleValue: win.uiScale
                 layout: win.gameMode ? win.gameLayout : BarLayoutService.layoutFor(win.screen ? win.screen.name : "")
 

@@ -156,6 +156,7 @@ Item {
     readonly property Item batteryToggle: batteryIndicator
     readonly property Item resourceToggle: resourceIndicator
     readonly property Item dateToggle: dateIndicator
+    readonly property Item clockToggle: clockButton
     readonly property Item weatherToggle: weatherIndicator
     readonly property Item mediaToggle: media
 
@@ -403,6 +404,7 @@ Item {
     signal keyboardLayoutClicked()
     // The date pill was clicked: open / close the calendar dropdown.
     signal dateClicked()
+    signal clockClicked()
     signal weatherClicked()
     // Notification bell clicked: opens the Quick Panel.
     signal notificationsToggleRequested()
@@ -907,9 +909,8 @@ Item {
             onClicked: status_Bar.dateClicked()
         }
 
-        // The clock: display only. It used to open the Quick Panel,
-        // but the notification bell does that now, so it has no
-        // click, press effect or pointer cursor.
+        // The clock: click opens the clock card dropdown
+        // (ClockPopup.qml, hung off this by Bar.qml).
         Item {
             id: clockButton
             parent: status_Bar.zoneItem("clock")
@@ -927,6 +928,7 @@ Item {
                 cornerRadius: mt.radiusBadge
                 fillColor: mt.chipFill
                 ringWidth: 6   // the bar's pills share this ring
+                pressed: clockArea.pressed
                 // Standing bar: "09:05" over "PM", so it's two lines tall.
                 implicitWidth: status_Bar.vertical ? clockPill.barVWidth : cLabel.implicitWidth + (status_Bar.capsule ? 20 : 28)
                 implicitHeight: status_Bar.vertical ? clockColumn.implicitHeight + (clockPill.capsule ? 16 : 24) : mt.pillHeight + mt.shadowOffset
@@ -962,6 +964,14 @@ Item {
                     font.weight: Font.ExtraBold
                     font.styleName: mt.fontStyleBold
                 }
+            }
+
+            MouseArea {
+                id: clockArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: status_Bar.clockClicked()
             }
         }
     }
