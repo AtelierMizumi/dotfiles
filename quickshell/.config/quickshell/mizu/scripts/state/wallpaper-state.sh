@@ -44,6 +44,10 @@ case "$mode" in
         [ -n "$path" ] || exit 2
         mkdir -p "$dir" || exit 1
         printf '%s' "$path" > "$file" || exit 1
+        sync_tool="$HOME/Projects/Tools/dotfiles/scripts/sync-sddm-wallpaper.sh"
+        if [ -x "$sync_tool" ]; then
+            "$sync_tool" "$path" >/dev/null 2>&1 || true
+        fi
         ;;
     load)
         [ -f "$file" ] && cat "$file"
