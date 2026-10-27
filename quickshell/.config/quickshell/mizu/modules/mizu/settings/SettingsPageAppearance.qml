@@ -5,9 +5,10 @@ import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 
-// Appearance: how the shell's colours are made. The wallpaper (with next / random),
-// the colour mode, the palette scheme and the accent for this wallpaper, and a
-// read-out of what the palette tool made of it (the colours and their contrast).
+// Appearance: how the shell's colours are made. The wallpaper (folder chips, a thumbnail
+// grid to pick from, next / random), the colour mode, the palette scheme and the accent
+// for this wallpaper, and a read-out of what the palette tool made of it (the colours and
+// their contrast).
 //
 // The wallpaper is the only input: the palette tool (palette/mizu_palette.py) turns it into
 // ~/.cache/mizu/tokens.json, which Tokens.qml watches. What this page adds are the knobs:
@@ -110,7 +111,161 @@ SettingsPage {
     }
 
     onWallpaperChanged: page.reload()
-    Component.onCompleted: page.reload()
+    Component.onCompleted: {
+        page.reload()
+        page.loadThumbs()
+        // Open on the page that holds the picture on the desktop now.
+        const at = WallpaperService.files.indexOf(WallpaperService.current)
+        if (at > 0)
+            grid.pageIndex = Math.floor(at / grid.perPage)
+    }
+
+    // ===== the picker's thumbnails =====
+    // wallpaper-thumbs.sh keeps small cached copies (720 px) of the folder's pictures in
+    // ~/.cache/mizu/wallpaper/thumbs, so the grid never decodes a full-size wallpaper. The
+    // map is global — absolute paths, never cleared — so switching folders never blanks
+    // the grid: a scan of the new folder merges its cached thumbs in, and a cell whose
+    // thumb is not there yet shows the original picture decoded small. A niced sweep
+    // makes every missing thumb of the whole tree in the background, so every folder is
+    // instant from then on.
+    readonly property string thumbsScript: Directories.script("thumbnails/wallpaper-thumbs.sh")
+    property var thumbs: ({})
+    property string scanWanted: ""
+    property int filesRev: 0
+
+    function loadThumbs() {
+        const dir = WallpaperService.directory
+        if (thumbScan.running) {
+            page.scanWanted = dir
+            return
+        }
+        page.scanWanted = dir
+        thumbScan.dir = dir
+        thumbScan.exec(["sh", page.thumbsScript, "scan", dir])
+    }
+
+    // The sweep: one make over the whole tree (the script lists it recursively), re-run
+    // when the folders changed while one was going. Niced — background work, not the
+    // desktop's frames.
+    function sweepThumbs() {
+        if (thumbSweep.running)
+            return
+        thumbSweep.rev = page.filesRev
+        thumbSweep.exec(["nice", "-n", "19", "sh", page.thumbsScript, "make", WallpaperService.rootDirectory])
+    }
+
+    Timer {
+        id: sweepDebounce
+
+        interval: 2000
+        onTriggered: page.sweepThumbs()
+    }
+
+    // The folder chips: the default root's first-level subfolders and, when one is set,
+    // the custom folder's own.
+    readonly property var folderChoices: {
+        const out = [{ path: "", label: "All" }]
+        const seen = ({})
+        for (let i = 0; i < WallpaperService.folders.length; i++) {
+            const f = WallpaperService.folders[i]
+            if (f in seen)
+                continue
+            seen[f] = true
+            const name = f.slice(f.lastIndexOf("/") + 1)
+            out.push({ path: f, label: name.charAt(0).toUpperCase() + name.slice(1) })
+        }
+        return out
+    }
+
+    Connections {
+        target: WallpaperService
+
+        function onFilesChanged() {
+            page.filesRev++
+            page.loadThumbs()
+            page.sweepDebounce.restart()
+            if (grid.pageIndex > grid.pageCount - 1)
+                grid.pageIndex = Math.max(0, grid.pageCount - 1)
+        }
+
+        // A folder switch goes back to its first page and previews at once (the scan does
+        // not wait for the listing); a wallpaper changed from elsewhere (Next, Random, the
+        // timer) opens the page it sits on.
+        function onDirectoryChanged() {
+            grid.pageIndex = 0
+            page.loadThumbs()
+        }
+
+        function onCurrentChanged() {
+            const at = WallpaperService.files.indexOf(WallpaperService.current)
+            if (at >= 0)
+                grid.pageIndex = Math.floor(at / grid.perPage)
+        }
+    }
+
+    Process {
+        id: thumbScan
+
+        property string dir: ""
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const map = Object.assign({}, page.thumbs)
+                const lines = text.split("\n")
+                let count = 0
+                for (let i = 0; i < lines.length; i++) {
+                    const parts = lines[i].split("\t")
+                    if (parts.length === 3 && parts[1] !== "" && parts[2] === "1") {
+                        map[parts[0]] = parts[1]
+                        count++
+                    }
+                }
+                page.thumbs = map
+                console.log("Appearance thumbs: scan " + thumbScan.dir + " -> "
+                            + count + " thumbs of " + lines.length + " lines")
+            }
+        }
+        stderr: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() !== "")
+                    console.warn("Appearance thumbs: scan: " + text.trim())
+            }
+        }
+        onExited: {
+            // The picker moved on while this scan ran: scan where it is now.
+            if (page.scanWanted !== "" && page.scanWanted !== thumbScan.dir) {
+                thumbScan.dir = page.scanWanted
+                thumbScan.exec(["sh", page.thumbsScript, "scan", page.scanWanted])
+            }
+        }
+    }
+
+    Process {
+        id: thumbSweep
+
+        property int rev: 0
+
+        stdout: SplitParser {
+            onRead: data => {
+                const parts = data.trim().split("\t")
+                if (parts.length === 3 && parts[0] === "ok") {
+                    const map = Object.assign({}, page.thumbs)
+                    map[parts[1]] = parts[2]
+                    page.thumbs = map
+                }
+            }
+        }
+        stderr: StdioCollector {
+            onStreamFinished: {
+                if (text.trim() !== "")
+                    console.warn("Appearance thumbs: sweep: " + text.trim())
+            }
+        }
+        onExited: {
+            if (page.filesRev !== thumbSweep.rev)
+                page.sweepThumbs()
+        }
+    }
 
     Process {
         id: reader
@@ -337,6 +492,187 @@ SettingsPage {
                     label: "Random"
                     detail: "Any other picture"
                     onActivated: WallpaperService.random()
+                }
+            }
+        }
+
+        // Which folder the picker lists: a chip per first-level folder, All for the whole tree.
+        Flow {
+            width: page.fullWidth
+            spacing: 10
+
+            Repeater {
+                model: page.folderChoices
+
+                delegate: SettingChip {
+                    required property var modelData
+
+                    label: modelData.label
+                    icon: modelData.path === "" ? "photo_library" : "folder"
+                    selected: WallpaperService.customFolder === modelData.path
+                    onClicked: WallpaperService.setFolder(modelData.path)
+                }
+            }
+        }
+
+        // The folder's pictures: a thumbnail per one, click to put it on the desktop.
+        // Pages of three rows of four with a pager under them, so a big folder stays
+        // one screen tall; an empty folder keeps room for its note.
+        Item {
+            width: page.fullWidth
+            height: WallpaperService.files.length === 0
+                    ? 140 : grid.height + (pager.visible ? pager.height + 10 : 0)
+
+            GridView {
+                id: grid
+
+                readonly property real gap: 12
+                readonly property int columns: 4
+                readonly property int rows: 3
+                readonly property int perPage: grid.rows * grid.columns
+                property int pageIndex: 0
+                readonly property int pageCount: Math.max(1, Math.ceil(WallpaperService.files.length / grid.perPage))
+
+                // The cell gives up the trailing gap the view adds after it, so four
+                // cells and three gaps fill the width exactly.
+                readonly property real cellW: Math.floor(grid.width / grid.columns) - grid.gap
+                readonly property real cellH: Math.round(grid.cellW * 9 / 16)
+
+                width: page.fullWidth
+                height: grid.rows * grid.cellH + (grid.rows - 1) * grid.gap
+                visible: WallpaperService.files.length > 0
+                interactive: false
+                clip: true
+                cellWidth: grid.cellW + grid.gap
+                cellHeight: grid.cellH + grid.gap
+                model: WallpaperService.files.slice(grid.pageIndex * grid.perPage, (grid.pageIndex + 1) * grid.perPage)
+
+                delegate: Rectangle {
+                    id: cell
+
+                    required property string modelData
+
+                    readonly property string thumb: page.thumbs[cell.modelData] ?? ""
+                    readonly property bool current: cell.modelData === WallpaperService.current
+                    readonly property bool hovered: area.containsMouse
+
+                    width: grid.cellW
+                    height: grid.cellH
+                    radius: 14
+                    color: mt.pSurfaceHover
+                    border.width: 3
+                    border.color: cell.current ? mt.accentMint : cell.hovered ? mt.pInkSub : mt.pLine
+                    antialiasing: true
+
+                    Behavior on border.color {
+                        ColorAnimation { duration: 120 }
+                    }
+
+                    RoundClip {
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        radii: [11, 11, 11, 11]
+
+                        Image {
+                            anchors.fill: parent
+                            // The cached thumbnail when it exists; the original decoded
+                            // small until the sweep has made it, so a folder never sits
+                            // on placeholders.
+                            source: "file://" + (cell.thumb !== "" ? cell.thumb : cell.modelData)
+                            // Smaller than the 720 px thumbnail itself: the grid cell never needs more.
+                            sourceSize: Qt.size(grid.cellW * 1.5, grid.cellH * 1.5)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                    }
+
+                    // The one on the desktop now.
+                    Rectangle {
+                        anchors.centerIn: parent
+                        visible: cell.current
+                        width: 44
+                        height: 44
+                        radius: 22
+                        color: Qt.rgba(0, 0, 0, 0.45)
+                        antialiasing: true
+
+                        MaterialIcon {
+                            anchors.centerIn: parent
+                            size: 28
+                            name: "check"
+                            weight: mt.settingsIconWeight
+                            color: mt.accentMint
+                        }
+                    }
+
+                    MouseArea {
+                        id: area
+
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: WallpaperService.setWallpaper(cell.modelData, "")
+                    }
+                }
+            }
+
+            // The pager: a page back or forward, only when the folder spans more than one.
+            Row {
+                id: pager
+
+                visible: WallpaperService.files.length > 0 && grid.pageCount > 1
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: grid.bottom
+                anchors.topMargin: 10
+                spacing: 14
+
+                SettingChip {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "chevron_left"
+                    opacity: grid.pageIndex > 0 ? 1 : 0.45
+                    onClicked: if (grid.pageIndex > 0)
+                                   grid.pageIndex--
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (grid.pageIndex + 1) + " / " + grid.pageCount
+                    color: mt.pInk
+                    font.family: mt.fontFamily
+                    font.pixelSize: 18
+                    font.weight: Font.ExtraBold
+                    font.styleName: mt.fontStyleBold
+                }
+
+                SettingChip {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "chevron_right"
+                    opacity: grid.pageIndex < grid.pageCount - 1 ? 1 : 0.45
+                    onClicked: if (grid.pageIndex < grid.pageCount - 1)
+                                   grid.pageIndex++
+                }
+            }
+
+            Column {
+                anchors.centerIn: parent
+                visible: WallpaperService.files.length === 0
+                spacing: 8
+
+                MaterialIcon {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    size: 40
+                    name: "folder_open"
+                    weight: mt.settingsIconWeight
+                    color: mt.pInkSub
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "No pictures in " + WallpaperService.directoryShort
+                    color: mt.pInkSub
+                    font.family: mt.fontFamily
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
                 }
             }
         }

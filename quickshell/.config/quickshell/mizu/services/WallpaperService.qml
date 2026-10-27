@@ -15,8 +15,9 @@ Singleton {
     id: root
 
     readonly property string home: Quickshell.env("HOME")
+    readonly property string rootDirectory: root.home + "/Pictures/Wallpapers"
     readonly property string customFolder: SettingsService.get("wallpaper.folder")
-    readonly property string directory: root.customFolder !== "" ? root.customFolder : root.home + "/Pictures/Wallpapers"
+    readonly property string directory: root.customFolder !== "" ? root.customFolder : root.rootDirectory
     readonly property url directoryUrl: "file://" + root.directory
     readonly property string directoryShort: root.directory.startsWith(root.home) ? "~" + root.directory.slice(root.home.length)
                                                                                   : root.directory
@@ -25,6 +26,9 @@ Singleton {
     property string current: ""
     // The pictures of the folder, searched recursively, sorted by path.
     property var files: []
+    // The picker's folder chips: the first-level subfolders of the default root and,
+    // when one is set, of the custom folder.
+    property var folders: []
 
     property bool restoring: true
     property bool listed: false
@@ -52,7 +56,7 @@ Singleton {
     }
 
     function lockImagePathFor(screenName) {
-        return root.imageFor(screenName)
+        return root.current
     }
 
     function restackWidgets() {}
@@ -88,6 +92,15 @@ Singleton {
         root.setWallpaper(pick, "")
     }
 
+    // A folder chip: "" or the default root means the whole tree of the default root.
+    // The rescan happens in onCustomFolderChanged, so a folder that arrives later
+    // (the saved setting coming in, an IPC write) lists the same way.
+    function setFolder(path) {
+        SettingsService.set("wallpaper.folder", path === "" || path === root.rootDirectory ? "" : path)
+    }
+
+    onCustomFolderChanged: root.rescan()
+
     function resetFolder() {
         SettingsService.set("wallpaper.folder", "")
     }
@@ -97,6 +110,7 @@ Singleton {
 
     function rescan() {
         lister.running = true
+        folderLister.running = true
     }
 
     // Runs the palette tool for the current wallpaper. A run in progress finishes first, then the latest picture is done.
@@ -118,6 +132,7 @@ Singleton {
     Component.onCompleted: {
         restorer.running = true
         lister.running = true
+        folderLister.running = true
     }
 
     // Once both the remembered pick and the folder are known: nothing remembered means the first picture of the folder;
@@ -166,6 +181,19 @@ Singleton {
             }
         }
         onExited: root.listed = true
+    }
+
+    Process {
+        id: folderLister
+        command: ["sh", "-c",
+                  "{ find -L \"$1\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null;"
+                  + " [ -n \"$2\" ] && [ \"$2\" != \"$1\" ] && find -L \"$2\" -mindepth 1 -maxdepth 1 -type d 2>/dev/null; } | sort -u",
+                  "sh", root.rootDirectory, root.customFolder]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.folders = text.split("\n").filter(line => line !== "")
+            }
+        }
     }
 
     Process {

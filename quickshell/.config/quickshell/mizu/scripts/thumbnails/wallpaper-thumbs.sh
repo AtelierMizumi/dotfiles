@@ -40,7 +40,8 @@ key() {
 }
 
 media_files() {
-    find "$1" -maxdepth 1 -type f \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \
+    # Recursive, like WallpaperService.qml's own listing of the folder.
+    find -L "$1" -type f \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \
         -o -iname '*.webp' -o -iname '*.bmp' -o -iname '*.mp4' -o -iname '*.webm' \
         -o -iname '*.mkv' -o -iname '*.mov' -o -iname '*.avi' \) 2>/dev/null | sort
 }
