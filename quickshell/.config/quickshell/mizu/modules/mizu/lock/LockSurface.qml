@@ -54,7 +54,12 @@ Item {
     // Settings -> Desktop -> Wallpaper -> Separate Lockscreen Wallpaper is on,
     // else the desktop's (WallpaperService.lockPathFor decides). One place, so
     // the real lock surface and LockRing.qml's copy of it can never differ.
-    readonly property string wallpaperFile: WallpaperService.lockImagePathFor(root.screenName)
+    readonly property string wallpaperFile: WallpaperService.lockPathFor(root.screenName)
+
+    function toFileUrl(p) {
+        if (!p || p === "") return ""
+        return p.startsWith("file://") ? p : ("file://" + p)
+    }
 
     readonly property real u: Math.max(0.55, root.height / 1080) * root.uiScale
     function px(n) {
@@ -318,7 +323,7 @@ Item {
         asynchronous: true
         fillMode: Image.PreserveAspectCrop
         sourceSize: Qt.size(Math.max(1, root.width), Math.max(1, root.height))
-        source: root.wallpaperFile !== "" ? ("file://" + root.wallpaperFile) : ""
+        source: root.toFileUrl(root.wallpaperFile)
     }
 
     MultiEffect {

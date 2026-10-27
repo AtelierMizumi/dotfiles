@@ -52,7 +52,7 @@ Item {
     property string screenName: ""
 
     // The same picture LockSurface.qml shows (WallpaperService decides which).
-    readonly property string wallpaperFile: WallpaperService.lockImagePathFor(root.screenName)
+    readonly property string wallpaperFile: WallpaperService.lockPathFor(root.screenName)
 
     readonly property real u: Math.max(0.55, root.height / 1080)
     function px(n) {
@@ -99,7 +99,11 @@ Item {
     // Decoded once, a little bigger than the screen, so a close-up of a part of it
     // still has detail. (The frames load the same file at the same size and share it.)
     readonly property int decodeSide: Math.min(3200, Math.max(1280, Math.ceil(Math.max(root.width, root.height) * 1.5)))
-    readonly property string imageUrl: root.wallpaperFile !== "" ? ("file://" + root.wallpaperFile) : ""
+    function toFileUrl(p) {
+        if (!p || p === "") return ""
+        return p.startsWith("file://") ? p : ("file://" + p)
+    }
+    readonly property string imageUrl: root.toFileUrl(root.wallpaperFile)
 
     Image {
         id: wallpaper

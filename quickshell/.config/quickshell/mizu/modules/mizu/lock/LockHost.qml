@@ -34,7 +34,7 @@ Item {
     // lock. The look is only built while locking now, so this host asks for it itself when
     // the wallpaper (or the style / crop setting) changes. It is cheap and de-duplicated;
     // without it the first lock after a wallpaper change would wait for the read.
-    readonly property string warmFile: root.calendar ? WallpaperService.lockImagePathFor(root.screenName) : ""
+    readonly property string warmFile: root.calendar ? WallpaperService.lockPathFor(root.screenName) : ""
     readonly property bool warmAuto: SettingsService.get("lock.crop") !== "fixed"
     function warmCrop() {
         if (root.calendar && root.warmAuto && root.warmFile !== "")
