@@ -275,6 +275,7 @@ t_editors_open_full_width() {
 # The laptop panel is 1920 logical pixels at scale 1; a comment that still gives 1536 or scale 1.25 is stale.
 t_comments_describe_the_laptop_panel_at_scale_1() {
   ! grep -qE '1536|scale 1\.25' "$CONFIG" || fail "a comment still gives the laptop panel as 1536 pixels or scale 1.25"
+  ! grep -qE 'scale 1\.25' "$ROOT/docs/USAGE.md" || fail "docs/USAGE.md still gives the laptop panel as scale 1.25"
 }
 
 # Succeeds when a top-level `workspace "<name>" { ... }` node (a niri named workspace) sets open-on-output to <output>.

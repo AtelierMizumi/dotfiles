@@ -3,8 +3,8 @@
 # ZCode, then Discord, Zalo, Steam and Waydroid. The window rules in config.kdl send each window to its named
 # workspace, and each workspace's open-on-output in config.kdl decides the monitor. Without the external monitor
 # those workspaces fall back to the laptop panel, so a single monitor still ends with browser, coding and games.
-# Antigravity's Electron window can map after the workspace is already focused, so on a single monitor this script
-# also moves it onto the coding workspace once it appears.
+# On a single monitor this script also moves Antigravity onto the coding workspace once its window appears. It is a
+# safety net, kept until single-monitor placement is verified live.
 #
 # A missing or failing app is logged and skipped, so one broken app cannot block the rest. Output goes to
 # ~/.local/state/niri/apps-start.log instead of niri's journal.
@@ -55,7 +55,7 @@ else
   start zcode /opt/ZCode/zcode
 fi
 start discord discord
-start zalo zalo --hidden
+start zalo zalo
 start steam steam
 
 # Waydroid needs its session before the window can open; the container is a system service, so if it is down the
