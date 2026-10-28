@@ -100,7 +100,6 @@ ShellRoot {
     QuickSource {
         id: quickState
         active: panel.up || panel.settingsShown
-        targetScreen: panel.targetScreen
     }
 
     NotificationSource {

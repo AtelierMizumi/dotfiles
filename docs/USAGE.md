@@ -105,6 +105,10 @@ Chi tiết và cách xử lý khi gõ không ra tiếng Việt: xem mục "Gõ t
 | `XF86AudioLowerVolume`, `XF86AudioRaiseVolume`, `XF86AudioMute`, `XF86AudioMicMute` | âm lượng và micro (phím laptop, núm xoay Sofle) |
 | `XF86AudioPlay`, `XF86AudioStop`, `XF86AudioPrev`, `XF86AudioNext` | điều khiển nhạc |
 
+Độ sáng áp dụng cho **mọi màn hình đang nối** theo tỉ lệ tương đối giữa các màn (kiểu KDE): màn chính 100% và màn
+phụ 50%, giảm nửa độ sáng tổng thì thành 50% và 25%. Riêng từng màn có slider của nó trong Quick Panel, dưới lưới
+nút bấm (laptop panel đi qua `brightnessctl`, màn ngoài qua DDC/CI `ddcutil`).
+
 Các phím mặc định khác của niri vẫn hoạt động, ví dụ `Super+M` (phóng to sát mép), `Super+,` và `Super+.` (gộp hoặc
 tách cửa sổ vào cột), `Super+[` và `Super+]`, các biến thể `Super+Ctrl+...`, kéo chuột kèm Super để di chuyển cửa sổ.
 

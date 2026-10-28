@@ -2309,7 +2309,7 @@ Scope {
                         speakerOn: root.source.speakerOn
                         microphoneVolume: root.source.microphoneVolume
                         speakerVolume: root.source.speakerVolume
-                        brightness: root.source.brightness
+                        brightnessMonitors: root.source.brightnessMonitors
                         keepAwakeOn: root.source.keepAwakeOn
                         notificationsOn: root.source.notificationsOn
                         editing: root.source.editing
@@ -2357,7 +2357,7 @@ Scope {
                         onSpeakerToggled: root.source.toggleSpeaker()
                         onMicrophoneVolumeMoved: value => root.source.setMicrophoneVolume(value)
                         onSpeakerVolumeMoved: value => root.source.setSpeakerVolume(value)
-                        onBrightnessMoved: value => root.source.setBrightness(value)
+                        onBrightnessMonitorMoved: (name, value) => root.source.setMonitorBrightness(name, value)
                         onKeepAwakeToggled: root.source.toggleKeepAwake()
                         onNotificationsToggled: root.source.toggleNotifications()
                         onEditToggled: root.source.toggleEditing()

@@ -82,34 +82,17 @@ Scope {
     property real speakerVolume: 0
     property real microphoneVolume: 0
 
-    // Which monitor Brightness controls — shell.qml binds this to
-    // panel.targetScreen, so it always tracks whichever screen the
-    // phone itself is currently open on.
-    property var targetScreen: null
+    // Brightness is not panel-local any more: every connected monitor is
+    // one entry in BrightnessService (DDC for externals, the laptop
+    // panel's backlight for eDP), re-exported here for the face's
+    // per-monitor sliders. `brightnessMonitorMoved` is a slider drag on
+    // one monitor; the OSD's keyboard steps (global, ratio-preserving)
+    // go through OSDSource.
+    readonly property var brightnessMonitors: BrightnessService.monitors
 
-    // 0-100, the slider's own state — same optimistic-then-corrected
-    // shape as speakerVolume/microphoneVolume above. Brightness lives
-    // in raw device units internally (see brightnessRawMax), not a
-    // clean 0-100 wpctl-style percentage, so this is derived from a
-    // current/max pair on every poll instead.
-    property real brightness: 100
-    property int brightnessRawMax: 100
-
-
-    // Which backend the target screen resolved to. Two tools cover this,
-    // same "missing tool just leaves it be" shape as everything else:
-    //   Laptop panel      brightnessctl    (backlight sysfs class)
-    //   External monitor  ddcutil          (DDC/CI over I2C, once the
-    //                                       monitor's bus is detected)
-    property bool brightnessDdc: false
-    property string brightnessBus: ""
-
-    // ddcutil detect is slow (a few hundred ms per bus at least), so
-    // it's run once — the first time the panel opens — rather than on
-    // every 3s poll. Each entry is {name: <DRM connector, e.g. "DP-1">,
-    // busNum: <I2C bus number>}.
-    property var ddcMonitors: []
-    property bool ddcDetected: false
+    function setMonitorBrightness(name, percent) {
+        BrightnessService.setMonitor(name, percent)
+    }
 
     readonly property bool keepAwakeOn: inhibitor.running
 
@@ -146,8 +129,6 @@ Scope {
     onActiveChanged: {
         if (active) {
             refresh()
-            if (!ddcDetected)
-                ddcDetectProc.running = true
         } else {
             // Forget the last sample so reopening the panel doesn't spread
             // one giant delta over however long it was closed.
@@ -160,23 +141,12 @@ Scope {
         }
     }
 
-    // Re-resolve which backend applies (and re-poll it) whenever the
-    // panel moves to a different monitor. Before the first DDC detect
-    // finishes there's nothing to resolve against yet — onExited below
-    // does this same pair of calls once detection lands.
-    onTargetScreenChanged: {
-        if (ddcDetected) {
-            resolveBrightnessBackend()
-            refreshBrightness()
-        }
-    }
-
     function refresh() {
         if (poll.running)
             return
         pollGen = actionGen
         poll.running = true
-        refreshBrightness()
+        BrightnessService.refreshAll()
     }
 
     // A moment after something changed, look again (debounced).
@@ -316,126 +286,8 @@ Scope {
     }
 
     // ===== brightness =====
-
-    Process {
-        id: ddcDetectProc
-        command: ["ddcutil", "detect", "--brief"]
-        stdout: SplitParser {
-            splitMarker: "\n\n"
-            onRead: data => {
-                if (!data.startsWith("Display "))
-                    return
-                const lines = data.split("\n").map(l => l.trim())
-                const connLine = lines.find(l => l.startsWith("DRM connector:"))
-                const busLine = lines.find(l => l.startsWith("I2C bus:"))
-                if (!connLine || !busLine)
-                    return
-                root.ddcMonitors.push({
-                    name: connLine.split("-").slice(1).join("-"),
-                    busNum: busLine.split("/dev/i2c-")[1]
-                })
-            }
-        }
-        onExited: {
-            root.ddcDetected = true
-            root.resolveBrightnessBackend()
-            root.refreshBrightness()
-        }
-    }
-
-    // Picks brightnessctl or ddcutil for `targetScreen`, based on
-    // whether that screen's name showed up as a DDC display above.
-    function resolveBrightnessBackend() {
-        if (!root.targetScreen)
-            return
-        const match = root.ddcMonitors.find(m => m.name === root.targetScreen.name)
-        root.brightnessDdc = !!match
-        root.brightnessBus = match ? match.busNum : ""
-    }
-
-    // Same "throw away a stale read" guard apply() above uses for the
-    // network/audio poll (pollGen vs. actionGen) — brightness never had
-    // its own copy, so a slow read already in flight (ddcutil especially:
-    // a few hundred ms over I2C) could land *after* a drag's optimistic
-    // setBrightness() and stomp it back to the pre-drag value, which then
-    // only self-corrected on the next poll a moment later. A fast
-    // drag-then-release made this easy to hit: plenty of time for a poll
-    // that started just before the drag to still be running when it ends.
-    property int brightnessPollGen: 0
-
-    function refreshBrightness() {
-        if (!root.ddcDetected || !root.targetScreen || brightnessPoll.running)
-            return
-        root.brightnessPollGen = root.actionGen
-        // Both branches print "<current> <max>" so apply() below can
-        // parse them the same way regardless of backend. ddcutil's own
-        // `getvcp 10 --brief` already prints that shape at the tail of
-        // "VCP 10 C <current> <max>"; brightnessctl needs two separate
-        // calls (g = current, m = max) stitched together to match.
-        brightnessPoll.command = root.brightnessDdc
-            ? ["ddcutil", "-b", root.brightnessBus, "getvcp", "10", "--brief"]
-            : ["sh", "-c", "echo \"$(brightnessctl g 2>/dev/null) $(brightnessctl m 2>/dev/null)\""]
-        brightnessPoll.running = true
-    }
-
-    Process {
-        id: brightnessPoll
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (root.brightnessPollGen !== root.actionGen) {
-                    // A drag happened while this read was in flight, so
-                    // it's already out of date — ask again once things
-                    // settle instead of clobbering the newer value.
-                    root.refreshSoon()
-                    return
-                }
-                const parts = text.trim().split(/\s+/)
-                const [current, max] = root.brightnessDdc ? [parts[3], parts[4]] : [parts[0], parts[1]]
-                const c = parseFloat(current)
-                const m = parseFloat(max)
-                if (!isNaN(c) && !isNaN(m) && m > 0) {
-                    root.brightnessRawMax = m
-                    root.brightness = Math.round((c / m) * 100)
-                }
-            }
-        }
-    }
-
-    // Same optimistic-set-then-debounce shape as setSpeakerVolume/
-    // setMicrophoneVolume below, just working in raw device units
-    // (brightnessRawMax) instead of a clean 0-100 wpctl percentage.
-    function setBrightness(percent) {
-        actionGen++
-        root.brightness = Math.max(0, Math.min(100, Math.round(percent)))
-        settleBrightness.restart()
-    }
-
-    Timer {
-        id: settleBrightness
-        interval: 80
-        onTriggered: {
-            if (brightnessAction.running)
-                settleBrightness.restart()
-            else
-                brightnessAction.running = true
-        }
-    }
-
-    Process {
-        id: brightnessAction
-        command: {
-            if (root.brightnessDdc) {
-                const raw = Math.max(1, Math.round((root.brightness / 100) * root.brightnessRawMax))
-                return ["ddcutil", "-b", root.brightnessBus, "setvcp", "10", String(raw)]
-            }
-            // Avoid setting the backlight to a literal 0% (that can
-            // black the panel out on some drivers) — 1% is effectively
-            // the same dimness without actually losing the display.
-            const pct = Math.round(root.brightness)
-            return ["brightnessctl", "--class", "backlight", "s", (pct <= 0 ? "1" : pct + "%"), "--quiet"]
-        }
-        onExited: root.refreshSoon()
-    }
+    // (BrightnessService owns it now — monitors, polls and writes. The
+    // re-export at the top of this file is all the panel needs.)
 
     Process {
         command: ["uname", "-n"]   // `hostname` is not installed by default on Arch (inetutils)

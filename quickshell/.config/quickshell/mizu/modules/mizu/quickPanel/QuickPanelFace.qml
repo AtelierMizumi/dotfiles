@@ -100,10 +100,10 @@ Item {
     // 0-100, fed from QuickSource.qml (see VolumeSlider.qml below).
     property real microphoneVolume: 0
     property real speakerVolume: 0
-    // 0-100, screen brightness for whichever monitor the panel itself is
-    // open on — QuickSource.qml resolves that to either brightnessctl
-    // (laptop panel) or ddcutil (external monitor) under the hood.
-    property real brightness: 100
+    // One entry per controllable monitor (BrightnessService, re-exported
+    // by QuickSource): {name, percent, ...}. The brightness area below
+    // lays one slider out per entry, KDE-applet style.
+    property var brightnessMonitors: []
     property bool keepAwakeOn: false
     property bool notificationsOn: true
     property bool editing: false
@@ -258,7 +258,9 @@ Item {
     // setMicrophoneVolume()/setSpeakerVolume().
     signal microphoneVolumeMoved(real value)
     signal speakerVolumeMoved(real value)
-    signal brightnessMoved(real value)
+    // One brightness slider per monitor: `name` is the dragged monitor's
+    // connector, forwarded to BrightnessService.setMonitor().
+    signal brightnessMonitorMoved(string name, real value)
     signal keepAwakeToggled()
     signal notificationsToggled()
     signal editToggled()
@@ -1576,14 +1578,40 @@ Item {
         antialiasing: true
     }
 
-    // Brightness: one slider under the button grid (BrightnessSlider.qml). It is not one of the arrangeable
-    // buttons, so it stays put and just follows the grid's height.
-    BrightnessSlider {
+    // Brightness: one slider per controllable monitor (BrightnessSlider.qml),
+    // KDE-applet style — each monitor moves on its own; a single-monitor
+    // setup renders exactly the old single slider. Not one of the
+    // arrangeable buttons, so it stays put and just follows the grid's
+    // height. Three or more monitors outgrow the band between the grid
+    // and the notifications card, which brightnessExtra below hands down.
+    Column {
         x: 67
         y: 570 + face.tileExtra
-        sliderWidth: 514
-        brightness: face.brightness
-        onBrightnessMoved: value => face.brightnessMoved(value)
+        width: 514
+        spacing: 4
+        Repeater {
+            model: face.brightnessMonitors
+            BrightnessSlider {
+                required property var modelData
+                readonly property bool many: face.brightnessMonitors.length > 1
+                sliderWidth: 514
+                compact: many
+                label: many ? modelData.name : ""
+                brightness: modelData.percent
+                onBrightnessMoved: value => face.brightnessMonitorMoved(modelData.name, value)
+            }
+        }
+    }
+
+    // Room the multi-monitor rows need beyond the 85px band under the
+    // button grid (570..655). The notifications card rides down by it and
+    // gives the same amount back at its own fixed bottom, exactly the
+    // tileExtra deal.
+    readonly property real brightnessExtra: {
+        const n = brightnessMonitors.length
+        if (n <= 1)
+            return 0
+        return Math.max(0, n * 36 + (n - 1) * 4 - 85)
     }
 
     // ===== notifications =====
@@ -1765,9 +1793,9 @@ Item {
     // bottom corners (radius 74).
     Rectangle {
         x: 40 + (mt.quickFlat ? 0 : 5)
-        y: 655 + 4 + face.tileExtra
+        y: 655 + 4 + face.tileExtra + face.brightnessExtra
         width: 575
-        height: 515 - face.tileExtra
+        height: 515 - face.tileExtra - face.brightnessExtra
         radius: 41
         color: mt.pLineShadow
         antialiasing: true
@@ -1779,11 +1807,13 @@ Item {
         id: notificationsCard
         x: 40
         // Rides down with the toggle card above it as button rows are
-        // added; it keeps its bottom edge where it always was, so it
-        // gets shorter by the same amount (the 18px gap holds).
-        y: 655 + face.tileExtra
+        // added (tileExtra), and down again as brightness rows are
+        // (brightnessExtra); it keeps its bottom edge where it always
+        // was, so it gets shorter by the same amount (the 18px gap
+        // holds).
+        y: 655 + face.tileExtra + face.brightnessExtra
         width: 575
-        height: 515 - face.tileExtra
+        height: 515 - face.tileExtra - face.brightnessExtra
         radius: 41
         color: face.wallOn ? Qt.alpha(mt.pSurface, face.cardAlpha) : mt.pSurface
         border.width: 3
@@ -2346,12 +2376,12 @@ Item {
     // The "Notifications" tag sitting on the card's top edge. With
     // something in the list, hovering it turns it into "Clear all".
     // Shifted up the same 41px as the card itself, above, so it still
-    // sits right on its top edge.
+    // sits right on its top edge (and down by brightnessExtra with it).
     Rectangle {
         id: tag
 
         x: 212
-        y: 639 + face.tileExtra
+        y: 639 + face.tileExtra + face.brightnessExtra
         width: 229
         height: 31
         radius: 27

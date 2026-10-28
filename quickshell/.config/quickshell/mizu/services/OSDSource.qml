@@ -109,160 +109,26 @@ Singleton {
             root.sourceAudio.muted = !root.sourceAudio.muted
     }
 
-    // ===== brightness =====
-    property real brightness: 100
-    property int brightnessRawMax: 100
-    property bool brightnessDdc: false
-    property string brightnessBus: ""
-
-    property var ddcMonitors: []
-    property bool ddcDetected: false
-    property bool ddcDetecting: false
-
     function focusedMonitorName() {
         return Compositor.focusedOutput
     }
 
-    function ensureBackendDetected(then) {
-        if (root.ddcDetected) {
-            then()
-            return
-        }
-        if (root.ddcDetecting)
-            return
-        root.ddcDetecting = true
-        ddcDetectProc.pendingCallback = then
-        ddcDetectProc.running = true
-    }
+    // ===== brightness =====
+    // The monitors themselves live in BrightnessService now — one entry
+    // per controllable monitor, and the keyboard step scales every one
+    // of them by the same factor so their relative ratios hold (KDE
+    // style). This side only shows the OSD, which displays the global
+    // value: the brightest monitor's percent.
+    readonly property real brightness: BrightnessService.brightness
 
-    Process {
-        id: ddcDetectProc
-        property var pendingCallback: null
-        command: ["ddcutil", "detect", "--brief"]
-        stdout: SplitParser {
-            splitMarker: "\n\n"
-            onRead: data => {
-                if (!data.startsWith("Display "))
-                    return
-                const lines = data.split("\n").map(l => l.trim())
-                const connLine = lines.find(l => l.startsWith("DRM connector:"))
-                const busLine = lines.find(l => l.startsWith("I2C bus:"))
-                if (!connLine || !busLine)
-                    return
-                root.ddcMonitors.push({
-                    name: connLine.split("-").slice(1).join("-"),
-                    busNum: busLine.split("/dev/i2c-")[1]
-                })
-            }
-        }
-        onExited: {
-            root.ddcDetected = true
-            root.ddcDetecting = false
-            const cb = pendingCallback
-            pendingCallback = null
-            if (cb)
-                cb()
-        }
-    }
-
-    function resolveBackend() {
-        const name = root.focusedMonitorName()
-        const match = root.ddcMonitors.find(m => m.name === name)
-        root.brightnessDdc = !!match
-        root.brightnessBus = match ? match.busNum : ""
-    }
-
-    // True once `brightness`/`brightnessRawMax` reflect a real reading
-    // rather than the property's plain default (100/100) — so the very
-    // first brightnessUp()/Down() of a session adjusts from the real
-    // current value instead of blindly from 100.
-    property bool brightnessSynced: false
-
-    // Reads the current value and, once the read actually lands
-    // (brightnessRead is async — ddcutil especially takes a moment),
-    // calls `then`. Pass no argument to just refresh in the background.
-    function refreshBrightness(then) {
-        brightnessRead.pendingCallback = then || null
-        brightnessRead.command = root.brightnessDdc
-            ? ["ddcutil", "-b", root.brightnessBus, "getvcp", "10", "--brief"]
-            : ["sh", "-c", "echo \"$(brightnessctl g 2>/dev/null) $(brightnessctl m 2>/dev/null)\""]
-        brightnessRead.running = true
-    }
-
-    Process {
-        id: brightnessRead
-        property var pendingCallback: null
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const parts = text.trim().split(/\s+/)
-                const [current, max] = root.brightnessDdc ? [parts[3], parts[4]] : [parts[0], parts[1]]
-                const c = parseFloat(current)
-                const m = parseFloat(max)
-                if (!isNaN(c) && !isNaN(m) && m > 0) {
-                    root.brightnessRawMax = m
-                    root.brightness = Math.round((c / m) * 100)
-                    root.brightnessSynced = true
-                }
-                const cb = brightnessRead.pendingCallback
-                brightnessRead.pendingCallback = null
-                if (cb)
-                    cb()
-            }
-        }
-    }
-
-    function applyBrightness(percent) {
-        root.brightness = Math.max(0, Math.min(100, Math.round(percent)))
-        settleBrightness.restart()
+    function brightnessUp() {
+        BrightnessService.brightnessUp()
         root.show("brightness")
     }
 
-    Timer {
-        id: settleBrightness
-        interval: 80
-        onTriggered: {
-            if (brightnessSet.running)
-                settleBrightness.restart()
-            else
-                brightnessSet.running = true
-        }
-    }
-
-    Process {
-        id: brightnessSet
-        command: {
-            if (root.brightnessDdc) {
-                const raw = Math.max(1, Math.round((root.brightness / 100) * root.brightnessRawMax))
-                return ["ddcutil", "-b", root.brightnessBus, "setvcp", "10", String(raw)]
-            }
-            const pct = Math.round(root.brightness)
-            return ["brightnessctl", "--class", "backlight", "s", (pct <= 0 ? "1" : pct + "%"), "--quiet"]
-        }
-    }
-
-    // Backend known + a real reading in hand, then apply `delta` (or
-    // jump straight to `absolute` when that's set instead) on top of it.
-    function withRealBrightness(delta, absolute) {
-        root.resolveBackend()
-        if (root.brightnessSynced) {
-            root.applyBrightness(absolute !== undefined ? absolute : root.brightness + delta)
-            return
-        }
-        root.refreshBrightness(() => {
-            root.applyBrightness(absolute !== undefined ? absolute : root.brightness + delta)
-        })
-    }
-
-    function brightnessUp() {
-        ensureBackendDetected(() => root.withRealBrightness(5, undefined))
-    }
-
     function brightnessDown() {
-        ensureBackendDetected(() => root.withRealBrightness(-5, undefined))
-    }
-
-    function setBrightness(percent) {
-        ensureBackendDetected(() => root.withRealBrightness(0, percent))
+        BrightnessService.brightnessDown()
+        root.show("brightness")
     }
 
     IpcHandler {
