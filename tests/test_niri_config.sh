@@ -269,7 +269,56 @@ t_windows_have_no_client_decorations() {
 }
 
 t_editors_open_full_width() {
-  window_rule_has 'app-id=r#"^([Cc]ode|[Aa]ntigravity)$"#' 'default-column-width { proportion 1.0; }' || fail "no window-rule opening VS Code and Antigravity full width"
+  window_rule_has 'app-id=r#"^([Cc]ode|[Aa]ntigravity|[Zz]code)$"#' 'default-column-width { proportion 1.0; }' || fail "no window-rule opening VS Code, Antigravity and ZCode full width"
+}
+
+# The laptop panel is 1920 logical pixels at scale 1; a comment that still gives 1536 or scale 1.25 is stale.
+t_comments_describe_the_laptop_panel_at_scale_1() {
+  ! grep -qE '1536|scale 1\.25' "$CONFIG" || fail "a comment still gives the laptop panel as 1536 pixels or scale 1.25"
+}
+
+# Succeeds when a top-level `workspace "<name>" { ... }` node (a niri named workspace) sets open-on-output to <output>.
+workspace_opens_on() {
+  active_lines "$CONFIG" | awk -v name="$1" -v out="$2" '
+    $0 ~ "^workspace \"" name "\"" { inblk = 1 }
+    inblk && index($0, "open-on-output \"" out "\"") > 0 { found = 1 }
+    inblk && /^\}/ { inblk = 0 }
+    END { exit !found }
+  '
+}
+
+# Browser on the laptop; coding and games on the external monitor, which falls back to the laptop when it is unplugged.
+t_named_workspaces_open_on_their_outputs() {
+  workspace_opens_on browser eDP-1 || fail 'workspace "browser" does not open on eDP-1'
+  workspace_opens_on coding HDMI-A-1 || fail 'workspace "coding" does not open on HDMI-A-1'
+  workspace_opens_on games HDMI-A-1 || fail 'workspace "games" does not open on HDMI-A-1'
+}
+
+# niri 26.04 reads named workspaces as top-level nodes; a `workspaces { }` wrapper is rejected as an unexpected node.
+t_workspaces_are_top_level_nodes() {
+  local active
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  ! grep -qE '^workspaces[[:space:]]*\{' <<<"$active" || fail "workspaces { } wrapper found; use top-level workspace nodes"
+}
+
+t_apps_start_runs_after_shell_start() {
+  local active shell_at apps_at
+  active=$(active_lines "$CONFIG") || fail "config unreadable"
+  shell_at=$(grep -nxF 'spawn-at-startup "~/.config/niri/scripts/shell-start"' <<<"$active" | cut -d: -f1)
+  apps_at=$(grep -nxF 'spawn-at-startup "~/.config/niri/scripts/apps-start"' <<<"$active" | cut -d: -f1)
+  [[ -n "$apps_at" ]] || fail "apps-start startup line missing"
+  [[ -n "$shell_at" && "$apps_at" -gt "$shell_at" ]] || fail "apps-start is not spawned after shell-start"
+}
+
+# Each autostarted app goes to its workspace by app-id; the workspace's open-on-output decides the monitor.
+t_app_windows_open_on_their_workspace() {
+  window_rule_has 'app-id=r#"^zen$"#' 'open-on-workspace "browser"' || fail "zen does not open on the browser workspace"
+  window_rule_has 'app-id=r#"^antigravity$"#' 'open-on-workspace "coding"' || fail "Antigravity does not open on the coding workspace"
+  window_rule_has 'app-id=r#"^zcode$"#' 'open-on-workspace "coding"' || fail "ZCode does not open on the coding workspace"
+  window_rule_has 'app-id=r#"^discord$"#' 'open-on-workspace "games"' || fail "Discord does not open on the games workspace"
+  window_rule_has 'app-id=r#"^zalo$"#' 'open-on-workspace "games"' || fail "Zalo does not open on the games workspace"
+  window_rule_has 'app-id=r#"^Waydroid$"#' 'open-on-workspace "games"' || fail "Waydroid does not open on the games workspace"
+  window_rule_has 'app-id=r#"^steam$"#' 'title=r#"^Steam$"#' 'open-on-workspace "games"' || fail "the Steam main window does not open on the games workspace"
 }
 
 t_steam_windows_float_and_notifications_corner() {

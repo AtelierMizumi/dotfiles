@@ -128,7 +128,7 @@ tách cửa sổ vào cột), `Super+[` và `Super+]`, các biến thể `Super+
 - **Nhiều terminal trong một cột:** `Super+,` đưa cửa sổ bên phải vào cột hiện tại; `Super+W` đổi sang dạng tab.
 - **Mỗi dự án một workspace:** `Super+1..9` để chuyển, `Super+Shift+1..9` để đưa cửa sổ sang. `Super+O` để nhìn tổng
   quan.
-- **Hai màn hình:** laptop (`eDP-1`, scale 1.25) ở trái, màn ngoài (`HDMI-A-1`) ở bên phải, đúng như trên Plasma.
+- **Hai màn hình:** laptop (`eDP-1`, scale 1) ở trái, màn ngoài (`HDMI-A-1`) ở bên phải, đúng như trên Plasma.
   `Super+Tab` qua lại giữa hai màn, `Super+Shift+Tab` mang cột theo. niri không ép tần số quét nên màn ngoài dùng tần
   số cao nhất của nó.
 - **Clipboard:** `Super+Shift+V` mở lịch sử, chọn mục để dán lại.
@@ -175,6 +175,23 @@ của `noctalia/.config/noctalia/config.toml`; Noctalia tự nạp lại khi lư
   `noctalia msg color-scheme-set wallpaper vibrant` (hoặc `faithful`, `soft`, `m3-content`...).
 - Mỗi lần xong một thay đổi, commit để có thể quay lại.
 
+## Tự khởi động app
+
+Khi niri khởi động, `scripts/apps-start` mở lần lượt zen-browser, Antigravity, ZCode, Discord, Zalo, Steam, rồi
+Waydroid (chỉ khi container Waydroid đang chạy). Mỗi nhóm nằm trên một workspace riêng:
+
+| Workspace | Màn hình | App |
+|---|---|---|
+| `browser` | laptop (`eDP-1`) | zen-browser |
+| `coding` | màn ngoài (`HDMI-A-1`) | Antigravity, ZCode |
+| `games` | màn ngoài (`HDMI-A-1`) | Discord, Zalo, Steam, Waydroid |
+
+- **Hai màn hình (ở nhà):** browser trên laptop, coding và games trên màn ngoài.
+- **Một màn hình (chỉ laptop):** coding và games rơi về laptop. Vì cửa sổ Antigravity (Electron) mở chậm, script còn
+  chuyển nó sang workspace `coding` khi nó xuất hiện.
+- App lỗi hoặc chưa cài thì được ghi log và bỏ qua, các app còn lại vẫn mở. Log: `~/.local/state/niri/apps-start.log`.
+- Discord là bản thường (`discord`), không phải Vesktop. Zalo khởi động với `--hidden`, như autostart cũ.
+
 ## Khi có sự cố
 
 - Về TTY bằng `Ctrl+Alt+F3` (hoặc F4) để sửa lỗi mà không cần giao diện đồ họa.
@@ -184,7 +201,9 @@ của `noctalia/.config/noctalia/config.toml`; Noctalia tự nạp lại khi lư
 
 ## Chưa kiểm chứng
 
-- Rule mở VS Code và Antigravity full width dựa trên app-id `code` và `antigravity`; chưa chạy thật để xác nhận.
+- Rule mở VS Code, Antigravity và ZCode full width dựa trên app-id `code`, `antigravity` và `zcode`; chưa chạy thật để xác nhận.
+- Autostart và workspace theo màn hình (`browser`, `coding`, `games`) chưa kiểm chứng trên session niri đang chạy. Sau khi
+  đăng nhập, chạy `niri msg workspaces` và `cat ~/.local/state/niri/apps-start.log` để xác nhận.
 - Nếu chữ trong VS Code bị mờ ở scale 1.25 hoặc bộ gõ không nhận trong VS Code, đó là do app chạy qua XWayland. Cách xử
   lý (cờ Electron cho Wayland) sẽ đổi hành vi VS Code cả trên Plasma, nên chưa đưa vào cấu hình.
 - Việc đổi bộ gõ đã được kiểm tra bằng `fcitx5-remote` (đổi được giữa `keyboard-us`, `lotus`, `anthy`), nhưng gõ thật

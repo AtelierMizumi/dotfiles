@@ -106,7 +106,7 @@ input {
     position x=1280 y=0
 }
 
-// The layout of the desk setup, copied from the Plasma session: the laptop panel at scale 1.25 (1536 logical
+// The layout of the desk setup, copied from the Plasma session: the laptop panel at scale 1 (1920 logical
 // pixels wide) with the external monitor to its right. No `mode` on purpose: the external monitor depends on where
 // the laptop is used, and without a mode niri picks the highest refresh rate for the monitor's own resolution.
 output "eDP-1" {
@@ -117,6 +117,20 @@ output "eDP-1" {
 output "HDMI-A-1" {
     scale 1
     position x=1920 y=0
+}
+
+// Named workspaces for the autostart layout (scripts/apps-start): browser on the laptop, coding and games on the
+// external monitor. With the external monitor unplugged, coding and games are placed on the laptop panel.
+workspace "browser" {
+    open-on-output "eDP-1"
+}
+
+workspace "coding" {
+    open-on-output "HDMI-A-1"
+}
+
+workspace "games" {
+    open-on-output "HDMI-A-1"
 }
 
 // Same cursor as Plasma (kcminputrc: size 36, breeze_cursors).
@@ -291,6 +305,9 @@ layout {
 // LC_TIME is set for the shell process only, so the clock shows Japanese weekday names and Plasma is unaffected. Note that apps it launches from its launcher inherit LC_TIME too.
 spawn-at-startup "~/.config/niri/scripts/shell-start"
 
+// Autostarted apps, in the order browser -> coding -> entertainment. The window rules below place their windows.
+spawn-at-startup "~/.config/niri/scripts/apps-start"
+
 // To run a shell command (with variables, pipes, etc.), use spawn-sh-at-startup:
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
 
@@ -367,8 +384,9 @@ window-rule {
 }
 
 // Float other Steam popup dialogs (friends list, chat, settings) freely, leaving the main library tiled.
+// The app-id regex is anchored so games ("steam_app_<id>") tile instead of floating.
 window-rule {
-    match app-id="steam"
+    match app-id=r#"^steam$"#
     exclude title=r#"^Steam$"#
     open-floating true
 }
@@ -399,10 +417,30 @@ window-rule {
     default-window-height { fixed 920; }
 }
 
-// Editors open full width: half of the 1536 logical pixels of the laptop panel is too narrow for code.
+// Editors open full width: half of the 1920 logical pixels of the laptop panel is too narrow for code.
 window-rule {
-    match app-id=r#"^([Cc]ode|[Aa]ntigravity)$"#
+    match app-id=r#"^([Cc]ode|[Aa]ntigravity|[Zz]code)$"#
     default-column-width { proportion 1.0; }
+}
+
+// Autostarted apps go to the workspace of their group: browser, coding, then games (see the workspace nodes above).
+window-rule {
+    match app-id=r#"^zen$"#
+    open-on-workspace "browser"
+}
+
+window-rule {
+    match app-id=r#"^antigravity$"#
+    match app-id=r#"^zcode$"#
+    open-on-workspace "coding"
+}
+
+window-rule {
+    match app-id=r#"^discord$"#
+    match app-id=r#"^zalo$"#
+    match app-id=r#"^Waydroid$"#
+    match app-id=r#"^steam$"# title=r#"^Steam$"#
+    open-on-workspace "games"
 }
 
 binds {

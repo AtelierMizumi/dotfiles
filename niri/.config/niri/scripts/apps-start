@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Autostarts the daily apps in the order browser -> coding -> entertainment: zen first, then Antigravity and
+# ZCode, then Discord, Zalo, Steam and Waydroid. The window rules in config.kdl send each window to its named
+# workspace, and each workspace's open-on-output in config.kdl decides the monitor. Without the external monitor
+# those workspaces fall back to the laptop panel, so a single monitor still ends with browser, coding and games.
+# Antigravity's Electron window can map after the workspace is already focused, so on a single monitor this script
+# also moves it onto the coding workspace once it appears.
+#
+# A missing or failing app is logged and skipped, so one broken app cannot block the rest. Output goes to
+# ~/.local/state/niri/apps-start.log instead of niri's journal.
+set -uo pipefail
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/niri"
+log_file="$state_dir/apps-start.log"
+mkdir -p "$state_dir"
+
+say() { echo "apps-start: $*" >>"$log_file"; }
+
+# start <log-name> <command...>: launch in the background; niri does not wait for this script, and the
+# long-running ones (Waydroid's session) must outlive it.
+start() {
+  local name="$1"
+  shift
+  if ! command -v "$1" >/dev/null 2>&1 && [[ ! -x "$1" ]]; then
+    say "$name: $1 not found, skipped"
+    return 1
+  fi
+  say "$name: starting $*"
+  "$@" >>"$log_file" 2>&1 &
+}
+
+output_count() {
+  niri msg outputs 2>/dev/null | grep -c '^Output "'
+}
+
+# wait_for_window <app-id> [timeout-seconds]: Electron apps take seconds to map a window.
+wait_for_window() {
+  local app_id="$1"
+  local deadline=$((SECONDS + ${2:-20}))
+  while (( SECONDS < deadline )); do
+    if niri msg --json windows 2>/dev/null | jq -e --arg id "$app_id" 'map(select(.app_id == $id)) | length > 0' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.5
+  done
+  return 1
+}
+
+start zen-browser zen-browser
+antigravity_started=0
+start antigravity antigravity && antigravity_started=1
+if command -v zcode >/dev/null 2>&1; then
+  start zcode zcode
+else
+  start zcode /opt/ZCode/zcode
+fi
+start discord discord
+start zalo zalo --hidden
+start steam steam
+
+# Waydroid needs its session before the window can open; the container is a system service, so if it is down the
+# app is skipped rather than started without root.
+if waydroid status 2>/dev/null | grep -q 'Container: RUNNING'; then
+  if ! waydroid status 2>/dev/null | grep -q 'Session: RUNNING'; then
+    say "waydroid: starting the session"
+    waydroid session start >>"$log_file" 2>&1 &
+    for _ in $(seq 1 15); do
+      waydroid status 2>/dev/null | grep -q 'Session: RUNNING' && break
+      sleep 1
+    done
+  fi
+  if waydroid status 2>/dev/null | grep -q 'Session: RUNNING'; then
+    start waydroid waydroid show-full-ui
+  else
+    say "waydroid: session did not start in time, skipped"
+  fi
+else
+  say "waydroid: container not running, skipped"
+fi
+
+# Single monitor: pull Antigravity onto the coding workspace once its window maps. With the external monitor
+# connected, the coding workspace already lives there and the window lands on it.
+if (( antigravity_started )) && [[ "$(output_count)" -eq 1 ]]; then
+  if wait_for_window antigravity; then
+    window_id=$(niri msg --json windows 2>/dev/null | jq -r '[.[] | select(.app_id == "antigravity")][0].id')
+    if [[ -n "$window_id" && "$window_id" != "null" ]]; then
+      niri msg action move-window-to-workspace coding --window-id "$window_id" >>"$log_file" 2>&1 || true
+    fi
+  else
+    say "antigravity: no window appeared in time, left where it opened"
+  fi
+fi
+
+# End on the browser workspace whatever happened above.
+niri msg action focus-workspace "browser" >>"$log_file" 2>&1 || true
