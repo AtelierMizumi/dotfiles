@@ -1603,15 +1603,16 @@ Item {
         }
     }
 
-    // Room the multi-monitor rows need beyond the 85px band under the
-    // button grid (570..655). The notifications card rides down by it and
-    // gives the same amount back at its own fixed bottom, exactly the
-    // tileExtra deal.
+    // Room the multi-monitor rows need beyond what the single 56px slider
+    // reserved (570..626, which keeps the 13px gap to the Notifications
+    // tag poking up at 639) — measuring to the card's edge instead let a
+    // second row run under the tag. The card rides down by it and gives
+    // the same amount back at its own fixed bottom, the tileExtra deal.
     readonly property real brightnessExtra: {
         const n = brightnessMonitors.length
         if (n <= 1)
             return 0
-        return Math.max(0, n * 36 + (n - 1) * 4 - 85)
+        return Math.max(0, n * 36 + (n - 1) * 4 - 56)
     }
 
     // ===== notifications =====
