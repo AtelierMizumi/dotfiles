@@ -161,9 +161,22 @@ tách cửa sổ vào cột), `Super+[` và `Super+]`, các biến thể `Super+
 
 ## Khóa và tắt màn hình
 
-Máy để ở bàn với hai màn hình cố định, nên thời gian khá dài: màn hình tắt sau **30 phút**, khóa sau **45 phút**,
-và **không tự suspend** (build, docker hay tải xuống không bị ngắt). Ứng dụng nào yêu cầu chặn idle (thường là trình phát video) thì được
-tôn trọng. Khóa thủ công bằng `Super+Esc`. Muốn đổi, sửa `timeout` (giây) trong `[idle.behavior.screen-off]` và `[idle.behavior.lock]`
+Máy để ở bàn với hai màn hình cố định, và **không tự suspend** (build, docker hay tải xuống không bị ngắt) — chỉ
+khóa và tắt màn hình, mọi tiến trình nền vẫn chạy tiếp.
+
+**Mizu (shell chính, `Idle.qml` + `LockState.qml`):**
+
+- Khóa thủ công: `Super+Esc` (hoặc `Super+Alt+L`). Mặc định khóa xong màn hình tắt luôn (toggle **Screens off when
+  locking** trong Settings → General): chạm phím/chuột là màn hình sáng lại ngay ở lockscreen, phải gõ mật khẩu (hoặc
+  vân tay) mới vào được desktop. Đây là chế độ "vibe code" treo máy: máy chạy tiếp trong bóng tối, không ai tương
+  tác được.
+- Tự động theo idle: khóa sau **30 phút** không cử động, tắt màn hình sau **45 phút**. Màn hình tự tắt do idle cũng
+  tự khóa kèm theo, nên màn hình tối luôn nghĩa là đã khóa. Ứng dụng yêu cầu chặn idle (trình phát video) được tôn
+  trọng. Đổi số phút bằng IPC (lưu vào `settings.json`):
+  `qs -c mizu ipc call options set idle.lockMinutes 10` (hoặc `idle.screenOffMinutes`).
+- Chỉ tắt màn hình, **không** khóa: `Mod+Shift+P` (niri); mọi phím/chuột đều bật lại màn hình.
+
+**Noctalia (shell dự phòng):** sửa `timeout` (giây) trong `[idle.behavior.screen-off]` và `[idle.behavior.lock]`
 của `noctalia/.config/noctalia/config.toml`; Noctalia tự nạp lại khi lưu.
 
 ## Thay đổi cấu hình

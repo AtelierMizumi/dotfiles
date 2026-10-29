@@ -214,6 +214,14 @@ SettingsPage {
         }
 
         SettingToggle {
+            icon: "tv_off"
+            label: "Screens off when locking"
+            detail: SettingsService.flag("lock.screenOffOnLock") ? "Locking ends in the dark; any input wakes the lockscreen while background work goes on" : "OFF (the lockscreen stays lit until the idle timer turns the screens off)"
+            checked: SettingsService.flag("lock.screenOffOnLock")
+            onToggled: SettingsService.toggle("lock.screenOffOnLock")
+        }
+
+        SettingToggle {
             icon: "blur_on"
             label: "Blur lock wallpaper"
             checked: SettingsService.flag("lock.blur")

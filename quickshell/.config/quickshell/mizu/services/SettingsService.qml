@@ -99,12 +99,16 @@ Singleton {
         // While the screen is locked nothing but the lockscreen can be seen, so the desktop widgets are unloaded (their memory and
         // work come back) and the bar's audio tap stops; unlocking builds them again. Off = leave everything running while locked.
         "lock.sleepDesktop": true,
+        // Locking ends with the screens off (DPMS): any input wakes the lockscreen back up, and the
+        // machine itself keeps running, so builds and downloads go on in the dark where nobody can
+        // touch the session without the password.
+        "lock.screenOffOnLock": true,
         // Fingerprint unlock: a second PAM context using pam_fprintd.so runs alongside
         // the password field. Off by default: machines without fprintd will skip it cleanly.
         "lock.fingerprint": false,
         // ===== Idle (services/Idle.qml) =====
-        "idle.screenOffMinutes": 30,    // the screens turn off after this many idle minutes (0 = never)
-        "idle.lockMinutes": 45,         // the session locks after this many idle minutes (0 = never); no automatic suspend
+        "idle.lockMinutes": 30,         // the session locks after this many idle minutes (0 = never); no automatic suspend
+        "idle.screenOffMinutes": 45,    // the screens turn off after this many idle minutes (0 = never); the idle screen-off locks too, so keep this at or after lockMinutes
         // ===== Media pill =====
         "media.leftClick": "panel",
         // ===== Bar and tray =====

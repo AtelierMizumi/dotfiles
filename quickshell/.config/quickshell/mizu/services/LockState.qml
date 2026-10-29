@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import qs.services
 
 // Whether the screen is locked — state only, same role as
 // WallpaperService.qml: no window, no PAM, no UI. Lockscreen.qml turns
@@ -90,6 +91,10 @@ Singleton {
             return
         root.locked = true
         root.phase = "locked"
+        // "Screens off when locking": the session is fully locked here, so ending in the dark is
+        // safe — any input wakes the lockscreen, and background work keeps running regardless.
+        if (SettingsService.flag("lock.screenOffOnLock"))
+            Compositor.powerOffMonitors()
     }
 
     // Lockscreen.qml only, right after a successful PAM check. The session
