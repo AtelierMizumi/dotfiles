@@ -28,7 +28,6 @@ downloaded=0
 page=1
 while (( downloaded < COUNT && page <= MAX_PAGES )); do
   response=$(curl -fsSL "${query}&page=${page}") || { echo "API page $page failed" >&2; break; }
-  full=0
   while IFS=$'\t' read -r id path; do
     [ -n "$id" ] && [ -n "$path" ] || continue
     if [ -n "$(have_id "$id" "$OUTDIR")" ]; then continue; fi
@@ -45,7 +44,7 @@ while (( downloaded < COUNT && page <= MAX_PAGES )); do
     fi
     downloaded=$((downloaded + 1))
     sleep 1
-    if (( downloaded >= COUNT )); then full=1; break; fi
+    if (( downloaded >= COUNT )); then break; fi
   done < <(jq -r '.data[] | [.id, .path] | @tsv' <<<"$response")
   page=$((page + 1))
 done
