@@ -128,7 +128,10 @@ Singleton {
         "wallpaper.enabled": true,      // Show or hide the desktop wallpaper
         "wallpaper.folder": "",         // the folder the picker lists, searched recursively ("" = ~/Pictures/Wallpapers)
         "wallpaper.duration": 450,      // crossfade between two wallpapers, ms
-        "wallpaper.randomMinutes": 0    // change to a random wallpaper every N minutes (0 = never)
+        "wallpaper.randomMinutes": 0,   // change to a random wallpaper every N minutes (0 = never)
+        "wallpaper.live": false,        // Live2D live wallpaper enabled
+        "wallpaper.liveModel": "gaoxiong_7", // Default Live2D model
+        "wallpaper.liveOutputs": ""     // Screens to draw on ("" = all)
     })
 
     // What has been changed from the defaults.

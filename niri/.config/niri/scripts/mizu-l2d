@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# mizu-l2d launcher & controller for the niri Wayland desktop session.
+# Supervises the Live2D layer-shell wallpaper host and forwards control commands.
+set -euo pipefail
+
+MIZU_L2D_DIR="${MIZU_L2D_DIR:-$HOME/Projects/Tools/mizu-l2d}"
+WALL_SCRIPT="$MIZU_L2D_DIR/wall/mizu-l2d-wall.py"
+CTL_SCRIPT="$MIZU_L2D_DIR/wall/mizu-l2d-ctl.py"
+
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+SOCKET_PATH="$RUNTIME_DIR/mizu-l2d-wall.sock"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/mizu-l2d"
+LOG_FILE="$STATE_DIR/wall.log"
+
+find_wall_pid() {
+  pgrep -f "python3.*mizu-l2d-wall.py" 2>/dev/null || true
+}
+
+is_running() {
+  local pids
+  pids=$(find_wall_pid)
+  [[ -n "$pids" ]]
+}
+
+cmd_start() {
+  if is_running; then
+    echo "mizu-l2d is already running (PID: $(find_wall_pid | tr '\n' ' '))"
+    return 0
+  fi
+
+  if [[ ! -f "$WALL_SCRIPT" ]]; then
+    echo "Error: wallpaper host script not found at $WALL_SCRIPT" >&2
+    exit 1
+  fi
+
+  mkdir -p "$STATE_DIR"
+  echo "Starting mizu-l2d wallpaper host..."
+
+  # Preload gtk4-layer-shell before libwayland loads
+  export LD_PRELOAD="/usr/lib/libgtk4-layer-shell.so${LD_PRELOAD:+:$LD_PRELOAD}"
+
+  # Launch wallpaper host detached in the background
+  nohup python3 -u "$WALL_SCRIPT" "$@" >> "$LOG_FILE" 2>&1 &
+  local new_pid=$!
+
+  # Wait up to 5 seconds for the control socket to appear
+  local tries=0
+  while [[ $tries -lt 25 ]]; do
+    if [[ -S "$SOCKET_PATH" ]] && kill -0 "$new_pid" 2>/dev/null; then
+      echo "mizu-l2d started successfully (PID: $new_pid, socket: $SOCKET_PATH)"
+      return 0
+    fi
+    if ! kill -0 "$new_pid" 2>/dev/null; then
+      echo "Error: mizu-l2d failed to start. Recent log output:" >&2
+      tail -n 20 "$LOG_FILE" >&2 || true
+      return 1
+    fi
+    sleep 0.2
+    tries=$((tries + 1))
+  done
+
+  echo "mizu-l2d started (PID: $new_pid), socket not ready yet. Check '$LOG_FILE'."
+}
+
+cmd_stop() {
+  local pids
+  pids=$(find_wall_pid)
+  if [[ -z "$pids" ]]; then
+    echo "mizu-l2d is not running."
+    # Ensure socket is cleaned up if stale
+    [[ -S "$SOCKET_PATH" ]] && rm -f "$SOCKET_PATH"
+    return 0
+  fi
+
+  echo "Stopping mizu-l2d (PID: $(echo "$pids" | tr '\n' ' '))..."
+  # Send SIGTERM so the GTK application executes its shutdown hook, restoring static wallpaper
+  for pid in $pids; do
+    kill -15 "$pid" 2>/dev/null || true
+  done
+
+  # Wait up to 5 seconds for clean exit
+  local tries=0
+  while [[ $tries -lt 25 ]]; do
+    if ! is_running; then
+      echo "mizu-l2d stopped cleanly."
+      [[ -S "$SOCKET_PATH" ]] && rm -f "$SOCKET_PATH"
+      return 0
+    fi
+    sleep 0.2
+    tries=$((tries + 1))
+  done
+
+  echo "mizu-l2d did not terminate gracefully; sending SIGKILL..."
+  for pid in $(find_wall_pid); do
+    kill -9 "$pid" 2>/dev/null || true
+  done
+  [[ -S "$SOCKET_PATH" ]] && rm -f "$SOCKET_PATH"
+}
+
+cmd_restart() {
+  cmd_stop
+  sleep 0.5
+  cmd_start "$@"
+}
+
+cmd_toggle() {
+  if is_running; then
+    cmd_stop
+  else
+    cmd_start "$@"
+  fi
+}
+
+cmd_status() {
+  local pids
+  pids=$(find_wall_pid)
+  if [[ -n "$pids" ]]; then
+    echo "mizu-l2d status: RUNNING (PID: $(echo "$pids" | tr '\n' ' '))"
+    if [[ -S "$SOCKET_PATH" ]] && [[ -f "$CTL_SCRIPT" ]]; then
+      python3 -I -B "$CTL_SCRIPT" status 2>/dev/null || true
+    fi
+  else
+    echo "mizu-l2d status: STOPPED"
+  fi
+}
+
+cmd_ctl() {
+  if [[ ! -f "$CTL_SCRIPT" ]]; then
+    echo "Error: ctl script not found at $CTL_SCRIPT" >&2
+    exit 1
+  fi
+  python3 -I -B "$CTL_SCRIPT" "$@"
+}
+
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") <command> [args...]
+
+Commands:
+  start [--outputs <list>]   Start mizu-l2d wallpaper host in background
+  stop                       Gracefully stop mizu-l2d and restore static wallpaper
+  restart                    Restart mizu-l2d wallpaper host
+  toggle                     Toggle live wallpaper on or off
+  status                     Check process and IPC socket status
+  ctl <command> [args...]    Send command via mizu-l2d-ctl (ping, status, page, etc.)
+  model <prefab>             Switch live model (e.g. gaoxiong_7, rangbaer_4)
+  motion <group>             Trigger motion group (e.g. touch_head)
+  camera zoom|pos|reset ...  Adjust camera viewport
+  log                        Follow wall host log ($LOG_FILE)
+EOF
+}
+
+action="${1:-}"
+shift || true
+
+case "$action" in
+  start)   cmd_start "$@" ;;
+  stop)    cmd_stop ;;
+  restart) cmd_restart "$@" ;;
+  toggle)  cmd_toggle "$@" ;;
+  status)  cmd_status ;;
+  ctl)     cmd_ctl "$@" ;;
+  model)   cmd_ctl model "$@" ;;
+  motion)  cmd_ctl motion "$@" ;;
+  camera)  cmd_ctl camera "$@" ;;
+  log)     mkdir -p "$STATE_DIR"; touch "$LOG_FILE"; exec tail -n 50 -f "$LOG_FILE" ;;
+  -h|--help|help|"") usage ;;
+  *)
+    echo "Unknown command: $action" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

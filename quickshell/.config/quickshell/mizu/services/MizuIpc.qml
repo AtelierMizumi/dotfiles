@@ -17,6 +17,18 @@ Item {
             WallpaperService.liveScreens = screens === "" ? [] : screens.split(",").map(s => s.trim())
         }
 
+        function l2dEnable(on: bool): void {
+            L2dService.setEnabled(on)
+        }
+
+        function l2dToggle(): void {
+            L2dService.toggle()
+        }
+
+        function l2dModel(prefab: string): void {
+            L2dService.setModel(prefab)
+        }
+
         function launcher(): void {
             if (!root.launcher) return
             if (root.launcher.open) {

@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import qs.services
 
 // Desktop: the wallpaper and how it changes, and the widgets on the desktop.
@@ -83,6 +84,289 @@ SettingsPage {
             label: "Rescan the folder"
             detail: WallpaperService.files.length + (WallpaperService.files.length === 1 ? " picture" : " pictures")
             onActivated: WallpaperService.rescan()
+        }
+    }
+
+    SectionCard {
+        id: l2dCard
+        title: "Live2D"
+        icon: "animation"
+
+        SettingToggle {
+            icon: "animation"
+            label: "Live2D wallpaper"
+            detail: L2dService.statusText
+            checked: L2dService.state === "running" || L2dService.state === "starting"
+            onToggled: L2dService.toggle()
+        }
+
+        SettingChoice {
+            label: "Screens"
+            sublabel: "Where the Live2D canvas is drawn (empty for all)"
+            current: L2dService.currentOutputs === "" ? "all" : L2dService.currentOutputs
+            options: [{ id: "all", label: "All monitors", icon: "desktop_windows" }].concat(
+                Quickshell.screens.map(s => ({ id: s.name, label: s.name, icon: "tv" }))
+            )
+            onPicked: id => L2dService.setOutputs(id === "all" ? "" : id)
+        }
+
+        Item {
+            id: l2dBrowser
+            width: l2dCard.innerWidth
+            implicitHeight: browserCol.implicitHeight
+
+            property string query: ""
+            property string expandedShipId: ""
+
+            Column {
+                id: browserCol
+                width: parent.width
+                spacing: 12
+
+                SettingText {
+                    width: parent.width
+                    label: "Search model"
+                    sublabel: "Filter ships by name or skin prefab"
+                    placeholder: "e.g. Takao, Laffey, gaoxiong..."
+                    value: l2dBrowser.query
+                    onSubmitted: text => l2dBrowser.query = text.trim()
+                    onCleared: l2dBrowser.query = ""
+                }
+
+                Repeater {
+                    model: {
+                        const q = l2dBrowser.query.toLowerCase()
+                        const all = L2dService.catalog || []
+                        if (!q) {
+                            const downloaded = []
+                            const others = []
+                            for (let i = 0; i < all.length; i++) {
+                                const ship = all[i]
+                                const hasDl = (ship.skins || []).some(s => L2dService.isDownloaded(s.prefab))
+                                if (hasDl) downloaded.push(ship)
+                                else if (others.length < 15) others.push(ship)
+                            }
+                            return downloaded.concat(others).slice(0, 15)
+                        }
+                        return all.filter(ship => {
+                            if (ship.name.toLowerCase().includes(q)) return true
+                            if (ship.cnName && ship.cnName.toLowerCase().includes(q)) return true
+                            if (ship.jpName && ship.jpName.toLowerCase().includes(q)) return true
+                            for (let j = 0; j < (ship.skins || []).length; j++) {
+                                const s = ship.skins[j]
+                                if (s.prefab.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
+                                    return true
+                            }
+                            return false
+                        }).slice(0, 30)
+                    }
+
+                    delegate: Item {
+                        id: shipRow
+                        required property var modelData
+                        readonly property var ship: modelData
+                        readonly property bool isExpanded: l2dBrowser.expandedShipId === ship.id
+                        readonly property bool hasActive: (ship.skins || []).some(s => s.prefab === L2dService.currentModel)
+                        readonly property bool hasDownloaded: (ship.skins || []).some(s => L2dService.isDownloaded(s.prefab))
+
+                        width: browserCol.width
+                        implicitHeight: shipHeader.implicitHeight + (isExpanded ? skinsCol.implicitHeight + 10 : 0)
+
+                        Rectangle {
+                            id: shipHeader
+                            width: parent.width
+                            height: 48
+                            radius: 10
+                            color: isExpanded ? mt.pSurfaceHover : mt.pSurface
+                            border.color: hasActive ? mt.accentCyan : (isExpanded ? mt.accentCyan : mt.pSurfaceDivider)
+                            border.width: hasActive ? 2 : 1
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                anchors.rightMargin: 16
+                                spacing: 12
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: isExpanded ? "▼" : "▶"
+                                    color: mt.pInkSub
+                                    font.pixelSize: 12
+                                    font.family: mt.fontFamily
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: ship.name + (ship.cnName ? (" (" + ship.cnName + ")") : "")
+                                    color: hasActive ? mt.accentCyan : mt.pInk
+                                    font.family: mt.fontFamily
+                                    font.bold: hasActive || isExpanded
+                                    font.pixelSize: 15
+                                }
+
+                                Item {
+                                    width: 1
+                                    height: 1
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                Rectangle {
+                                    visible: hasDownloaded
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    height: 20
+                                    width: dlTagText.implicitWidth + 10
+                                    radius: 10
+                                    color: mt.chipFill
+
+                                    Text {
+                                        id: dlTagText
+                                        anchors.centerIn: parent
+                                        text: "Downloaded"
+                                        color: mt.chipInk
+                                        font.family: mt.fontFamily
+                                        font.pixelSize: 10
+                                        font.bold: true
+                                    }
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: (ship.skins ? ship.skins.length : 0) + " skin(s)"
+                                    color: mt.pInkSub
+                                    font.family: mt.fontFamily
+                                    font.pixelSize: 12
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (l2dBrowser.expandedShipId === ship.id) {
+                                        l2dBrowser.expandedShipId = ""
+                                    } else {
+                                        l2dBrowser.expandedShipId = ship.id
+                                    }
+                                }
+                            }
+                        }
+
+                        Column {
+                            id: skinsCol
+                            visible: isExpanded
+                            anchors.top: shipHeader.bottom
+                            anchors.topMargin: 8
+                            anchors.left: parent.left
+                            anchors.leftMargin: 16
+                            anchors.right: parent.right
+                            spacing: 6
+
+                            Repeater {
+                                model: ship.skins || []
+                                delegate: Rectangle {
+                                    id: skinCard
+                                    required property var modelData
+                                    readonly property var skin: modelData
+                                    readonly property bool downloaded: L2dService.isDownloaded(skin.prefab)
+                                    readonly property bool isCurrent: L2dService.currentModel === skin.prefab
+                                    readonly property bool isDownloadingThis: L2dService.downloadingPrefab === skin.prefab
+
+                                    width: skinsCol.width
+                                    height: 44
+                                    radius: 8
+                                    color: isCurrent ? mt.surfaceHover : mt.surface
+                                    border.color: isCurrent ? mt.accentCyan : mt.surfaceDivider
+                                    border.width: isCurrent ? 2 : 1
+
+                                    Row {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 14
+                                        anchors.rightMargin: 14
+                                        spacing: 12
+
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: skin.name + " (" + skin.prefab + ")"
+                                            color: isCurrent ? mt.accentCyan : mt.pInk
+                                            font.family: mt.fontFamily
+                                            font.pixelSize: 13
+                                            font.bold: isCurrent
+                                        }
+
+                                        Item {
+                                            width: 1
+                                            height: 1
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                    }
+
+                                    Row {
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 12
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        spacing: 8
+
+                                        Rectangle {
+                                            visible: isCurrent
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            height: 24
+                                            width: activeText.implicitWidth + 12
+                                            radius: 12
+                                            color: mt.accentCyan
+
+                                            Text {
+                                                id: activeText
+                                                anchors.centerIn: parent
+                                                text: "Active"
+                                                color: mt.textWhite
+                                                font.family: mt.fontFamily
+                                                font.pixelSize: 11
+                                                font.bold: true
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            visible: !isCurrent
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            height: 28
+                                            width: btnLabel.implicitWidth + 16
+                                            radius: 6
+                                            color: isDownloadingThis ? mt.chipFill : (downloaded ? mt.surfaceTint : mt.accentCyan)
+
+                                            Text {
+                                                id: btnLabel
+                                                anchors.centerIn: parent
+                                                text: isDownloadingThis ? "Downloading..." : (downloaded ? "Use" : "Download")
+                                                color: isDownloadingThis ? mt.chipInk : (downloaded ? mt.pInk : mt.textWhite)
+                                                font.family: mt.fontFamily
+                                                font.pixelSize: 12
+                                                font.bold: true
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: isDownloadingThis ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                                enabled: !isDownloadingThis
+                                                onClicked: {
+                                                    if (downloaded) {
+                                                        L2dService.setModel(skin.prefab)
+                                                    } else {
+                                                        L2dService.downloadModel(skin.prefab, (ok, _) => {
+                                                            if (ok) {
+                                                                L2dService.setModel(skin.prefab)
+                                                            }
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
