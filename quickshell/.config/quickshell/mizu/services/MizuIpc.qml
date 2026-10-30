@@ -45,6 +45,14 @@ Item {
             L2dService.togglePlacementLocked()
         }
 
+        function l2dLayout(mode: string): void {
+            L2dService.setLayout(mode)
+        }
+
+        function l2dPalette(): void {
+            L2dService.applyPalette(true)
+        }
+
         function launcher(): void {
             if (!root.launcher) return
             if (root.launcher.open) {

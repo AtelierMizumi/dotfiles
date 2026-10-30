@@ -108,6 +108,10 @@ Scope {
     // follows changes made from elsewhere. Game Mode is not read: it is owned by GameModeService, and this only shows it.
     property bool nightLightOn: false
     readonly property bool gameModeOn: GameModeService.enabled
+    // Live2D (L2dService.qml): on while the wallpaper host is up or starting;
+    // the detail line shows the current model.
+    readonly property bool l2dOn: L2dService.running || L2dService.state === "starting"
+    readonly property string l2dDetail: L2dService.currentModel
     // Kelvin. 6000 means "no tint". This is how warm the screen goes while Night Light is ON (the Night Light
     // card, right-click on the tile, sets it) and is remembered across restarts (scripts/state/nightlight-state.sh).
     property int nightLightTemperature: 4500
@@ -540,6 +544,12 @@ Scope {
     // the phones are drawn flat). This only forwards the click.
     function toggleGameMode() {
         GameModeService.toggle()
+    }
+
+    // Live2D (L2dService.qml): forwards the click; the master toggle starts or
+    // stops the wallpaper host.
+    function toggleL2d() {
+        L2dService.toggle()
     }
 
     // ===== extra buttons =====

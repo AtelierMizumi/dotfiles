@@ -122,8 +122,12 @@ Singleton {
     }
 
     // Runs the palette tool for the current wallpaper. A run in progress finishes first, then the latest picture is done.
+    // While the Live2D wallpaper owns the theme (a model is up and "theme from character" is on) the static picture's
+    // palette waits: it is built by the next stop, on whatever picture is current then.
     function runPalette() {
         if (root.current === "")
+            return
+        if (L2dService.running && L2dService.liveTheme)
             return
         if (palette.running) {
             palette.again = true
@@ -134,7 +138,13 @@ Singleton {
     }
 
     readonly property string themeMode: SettingsService.get("theme.mode")
-    onThemeModeChanged: root.runPalette()
+    onThemeModeChanged: {
+        // A mode change regenerates whichever palette currently owns the theme.
+        if (L2dService.running && L2dService.liveTheme)
+            L2dService.applyPalette(false)
+        else
+            root.runPalette()
+    }
 
     // Start: the remembered pick, then the folder, then the palette if there is no token file yet.
     Component.onCompleted: {

@@ -26,3 +26,6 @@ __pycache__/
 quickshell/.config/quickshell/mizu-user/
 claudeworks*.txt
 ClaudeWorks*.txt
+
+# agent tooling local state
+.playwright-mcp/

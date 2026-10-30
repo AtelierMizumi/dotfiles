@@ -94,7 +94,15 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         self.assertIn('"wallpaper.live": false', content)
         self.assertIn('"wallpaper.liveModel": "gaoxiong_7"', content)
         self.assertIn('"wallpaper.liveOutputs": ""', content)
-        self.assertIn('"wallpaper.placementLocked": true', content)
+        # The key must start its own line: a \n inside the line's comment once
+        # left it commented out while this substring check still matched.
+        self.assertRegex(content, r'(?m)^\s*"wallpaper\.placementLocked": true\b')
+
+    def test_settings_service_defines_theme_and_layout(self):
+        settings_file = MIZU_DIR / "services/SettingsService.qml"
+        content = settings_file.read_text(encoding="utf-8")
+        self.assertRegex(content, r'(?m)^\s*"wallpaper\.liveTheme": true\b')
+        self.assertRegex(content, r'(?m)^\s*"wallpaper\.liveLayout": "independent"')
 
     def test_l2d_service_exists_and_declares_lifecycle(self):
         service_file = MIZU_DIR / "services/L2dService.qml"
@@ -165,6 +173,72 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         wall_file = Path("/home/thuanc177/Projects/Tools/mizu-l2d/wall/mizu-l2d-wall.py")
         wall_content = wall_file.read_text(encoding="utf-8")
         self.assertIn("set_media_playback_requires_user_gesture(False)", wall_content)
+
+    def test_l2d_service_defines_layout_and_palette(self):
+        service_file = MIZU_DIR / "services/L2dService.qml"
+        content = service_file.read_text(encoding="utf-8")
+        self.assertIn('property string currentLayout', content)
+        self.assertIn("function setLayout(mode)", content)
+        self.assertIn("function applyPalette(force)", content)
+        self.assertIn("function setLiveTheme(enabled)", content)
+        self.assertIn("function toggleLiveTheme()", content)
+        self.assertIn("property bool liveTheme", content)
+        self.assertIn("l2d_palette.py", content)
+        self.assertIn("WallpaperService.runPalette()", content)
+        self.assertIn("mirror ? \"true\" : \"false\"", content)
+
+    def test_mizu_ipc_defines_layout_and_palette(self):
+        ipc_file = MIZU_DIR / "services/MizuIpc.qml"
+        content = ipc_file.read_text(encoding="utf-8")
+        self.assertIn("function l2dLayout(mode: string)", content)
+        self.assertIn("function l2dPalette()", content)
+
+    def test_quick_panel_has_l2d_tile(self):
+        tiles_file = MIZU_DIR / "modules/common/functions/QuickTiles.js"
+        content = tiles_file.read_text(encoding="utf-8")
+        self.assertIn('"l2d"', content)
+        face_file = MIZU_DIR / "modules/mizu/quickPanel/QuickPanelFace.qml"
+        content = face_file.read_text(encoding="utf-8")
+        self.assertIn('case "l2d"', content)
+        self.assertIn("property bool l2dOn", content)
+        self.assertIn("signal l2dToggled()", content)
+        panel_file = MIZU_DIR / "modules/mizu/quickPanel/QuickPanel.qml"
+        content = panel_file.read_text(encoding="utf-8")
+        self.assertIn("onL2dToggled: root.source.toggleL2d()", content)
+        source_file = MIZU_DIR / "services/QuickSource.qml"
+        content = source_file.read_text(encoding="utf-8")
+        self.assertIn("function toggleL2d()", content)
+        self.assertIn("L2dService.toggle()", content)
+
+    def test_settings_page_desktop_defines_layout_and_theme(self):
+        page_file = MIZU_DIR / "modules/mizu/settings/SettingsPageDesktop.qml"
+        content = page_file.read_text(encoding="utf-8")
+        self.assertIn("L2dService.setLayout(", content)
+        self.assertIn("L2dService.toggleLiveTheme()", content)
+        self.assertIn("L2dService.applyPalette(true)", content)
+
+    def test_palette_tooling_exists(self):
+        palette_dir = MIZU_DIR / "palette"
+        l2d_file = palette_dir / "l2d_palette.py"
+        self.assertTrue(l2d_file.is_file())
+        content = l2d_file.read_text(encoding="utf-8")
+        self.assertIn("def accent_from_pixels(", content)
+        self.assertIn("def find_bg(", content)
+        self.assertIn("def texture_paths(", content)
+        self.assertIn("def make_swatch(", content)
+        mizu_file = palette_dir / "mizu_palette.py"
+        content = mizu_file.read_text(encoding="utf-8")
+        self.assertIn('--accent', content)
+
+    def test_wall_host_handles_mirror(self):
+        wall_file = Path("/home/thuanc177/Projects/Tools/mizu-l2d/wall/mizu-l2d-wall.py")
+        content = wall_file.read_text(encoding="utf-8")
+        self.assertIn("mirror", content)
+        self.assertIn("def make_surface(self, monitor, source=None)", content)
+        self.assertIn("Gtk.WidgetPaintable", content)
+        self.assertIn("isinstance(view, WebKit.WebView)", content)
+        example = Path("/home/thuanc177/Projects/Tools/mizu-l2d/docs/config.example.toml")
+        self.assertIn("mirror", example.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

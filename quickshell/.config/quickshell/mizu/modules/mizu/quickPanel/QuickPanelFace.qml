@@ -115,6 +115,10 @@ Item {
     property bool darkModeOn: false
     property string darkModeName: "light"
     property string powerProfileName: "balanced"
+    // Live2D wallpaper (owned by L2dService): whether the host is up, and the
+    // running model's name for the subtitle.
+    property bool l2dOn: false
+    property string l2dDetail: ""
     // Night Light's card (right-click the tile): how warm it goes (Kelvin)
     // and the Automatic schedule (hours of day). Owned by QuickSource.qml.
     property bool nightLightDialogOpen: false
@@ -271,6 +275,7 @@ Item {
     signal gameModeToggled()
     signal darkModeToggled()
     signal powerProfileCycled()
+    signal l2dToggled()
     // Screen Snip: a one-shot. The panel closes first.
     signal tileActionRequested(string id)
     // Edit mode (the stylus button): drag a button onto another's spot to
@@ -1180,6 +1185,7 @@ Item {
         case "darkMode": return "Colour Mode"
         case "screenSnip": return "Screen Snip"
         case "powerProfile": return "Power Profile"
+        case "l2d": return "Live2D"
         }
         return ""
     }
@@ -1196,6 +1202,7 @@ Item {
         case "gameMode": return face.gameModeOn
         case "darkMode": return face.darkModeOn
         case "powerProfile": return face.powerProfileName === "performance"
+        case "l2d": return face.l2dOn
         }
         return false
     }
@@ -1214,6 +1221,7 @@ Item {
         case "darkMode": return face.darkModeName === "light" ? "Light" : (face.darkModeName === "auto" ? "Auto" : "Dark")
         case "screenSnip": return "Tap"
         case "powerProfile": return face.powerProfileName === "saver" ? "Saver" : (face.powerProfileName === "performance" ? "Performance" : "Balanced")
+        case "l2d": return face.l2dOn ? face.l2dDetail : "OFF"
         }
         return ""
     }
@@ -1235,6 +1243,7 @@ Item {
         case "darkMode": return face.darkModeName === "light" ? "light_mode" : (face.darkModeName === "auto" ? "brightness_auto" : "dark_mode")
         case "screenSnip": return "screenshot_region"
         case "powerProfile": return face.powerProfileName === "saver" ? "energy_savings_leaf" : (face.powerProfileName === "performance" ? "speed" : "balance")
+        case "l2d": return "animation"
         }
         return ""
     }
@@ -1257,6 +1266,7 @@ Item {
         case "gameMode": face.gameModeToggled(); break
         case "darkMode": face.darkModeToggled(); break
         case "powerProfile": face.powerProfileCycled(); break
+        case "l2d": face.l2dToggled(); break
         case "screenSnip":
             face.panelCloseRequested()
             face.tileActionRequested(id)

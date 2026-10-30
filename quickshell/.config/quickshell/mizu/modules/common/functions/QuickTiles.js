@@ -25,7 +25,7 @@
 // the "add" tray lists the unused ones in.
 var catalog = ["network", "bluetooth", "keepAwake", "microphone", "speaker",
                "notifications", "nightLight", "gameMode",
-               "darkMode", "screenSnip", "powerProfile"]
+               "darkMode", "screenSnip", "powerProfile", "l2d"]
 
 // Buttons that do something once and have no on/off of their own (Screen
 // Snip): a click closes the panel first, then runs.

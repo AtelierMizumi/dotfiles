@@ -2,9 +2,10 @@
 """Turn a wallpaper into the mizu tokens and the niri focus-ring colors.
 
     python3 -I -B mizu_palette.py <wallpaper> [--tokens PATH] [--niri PATH] [--mode auto|dark|light]
-                                  [--overrides PATH] [--cache-dir PATH]
+                                  [--accent #RRGGBB] [--overrides PATH] [--cache-dir PATH]
 
 Writes ~/.cache/mizu/tokens.json and ~/.config/niri/colors.kdl (atomically) and prints the tokens path.
+--accent forces the accent colour for this run, on top of the overrides file.
 Exit codes: 0 done; 2 the image or the color generator failed, both previous files are left untouched; 64 usage error.
 Nothing outside the given paths is written.
 """
@@ -15,6 +16,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -52,6 +54,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--tokens", type=Path, default=defaults["tokens"])
     parser.add_argument("--niri", type=Path, default=defaults["niri"])
     parser.add_argument("--mode", choices=("auto", "dark", "light"), default="auto")
+    parser.add_argument("--accent", default=None, metavar="#RRGGBB",
+                        help="force the accent colour for this run, on top of the overrides file")
     parser.add_argument("--overrides", type=Path, default=defaults["overrides"])
     parser.add_argument("--cache-dir", type=Path, default=defaults["cache_dir"])
     return parser
@@ -99,6 +103,11 @@ def main(argv, grid_reader=None, generator_factory=None, out=None) -> int:
         return EXIT_FAILED
 
     overrides = _load_overrides(args.overrides, str(wallpaper))
+    if args.accent is not None:
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", args.accent):
+            print(f"mizu_palette.py: --accent wants #RRGGBB, got {args.accent!r}", file=sys.stderr)
+            return EXIT_USAGE
+        overrides["accent"] = args.accent
     cache_file = args.cache_dir / f"{_cache_key(image_bytes, args.mode, overrides)}.json"
 
     tokens = None

@@ -111,6 +111,17 @@ SettingsPage {
             onPicked: id => L2dService.setOutputs(id === "all" ? "" : id)
         }
 
+        SettingChoice {
+            label: "Layout"
+            sublabel: "Mirror draws the first screen's model on every other screen with one shared render, saving memory; only the first screen stays interactive"
+            current: L2dService.currentLayout
+            options: [
+                { id: "independent", label: "Independent", icon: "grid_view" },
+                { id: "mirror", label: "Mirror", icon: "content_copy" }
+            ]
+            onPicked: id => L2dService.setLayout(id)
+        }
+
         SettingToggle {
             icon: "visibility"
             label: "Interaction hints"
@@ -133,6 +144,21 @@ SettingsPage {
             detail: "Model head & eyes smoothly follow cursor across the screen"
             checked: L2dService.gaze
             onToggled: L2dService.toggleGaze()
+        }
+
+        SettingToggle {
+            icon: "palette"
+            label: "Theme colors from character"
+            detail: "The shell theme follows this model and its background while the wall runs; the wallpaper's own palette returns when it stops"
+            checked: L2dService.liveTheme
+            onToggled: L2dService.toggleLiveTheme()
+        }
+
+        SettingAction {
+            icon: "brush"
+            label: "Apply colors now"
+            detail: "Re-extract the palette from the current model and background"
+            onActivated: L2dService.applyPalette(true)
         }
 
         Rectangle {

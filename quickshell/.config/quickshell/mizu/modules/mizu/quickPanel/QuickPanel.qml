@@ -2322,6 +2322,8 @@ Scope {
                         darkModeOn: root.source.darkModeOn
                         darkModeName: root.source.darkModeName
                         powerProfileName: root.source.powerProfileName
+                        l2dOn: root.source.l2dOn
+                        l2dDetail: root.source.l2dDetail
                         tiles: root.source.tiles
                         tileColumns: root.source.tileColumns
                         notifications: root.notificationSource.entries
@@ -2368,6 +2370,7 @@ Scope {
                         onGameModeToggled: root.source.toggleGameMode()
                         onDarkModeToggled: root.source.toggleDarkMode()
                         onPowerProfileCycled: root.source.cyclePowerProfile()
+                        onL2dToggled: root.source.toggleL2d()
                         onTileActionRequested: id => root.source.runTileAction(id)
                         onTileMoveRequested: (from, to) => root.source.moveTile(from, to)
                         onTileResizeRequested: index => root.source.resizeTile(index)

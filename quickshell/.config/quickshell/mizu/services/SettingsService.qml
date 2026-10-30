@@ -135,7 +135,9 @@ Singleton {
         "wallpaper.liveModel": "gaoxiong_7", // Default Live2D model
         "wallpaper.liveOutputs": "",    // Screens to draw on ("" = all)
         "wallpaper.liveTips": false,    // Show interaction hints on Live2D model
-        "wallpaper.placementLocked": true // Lock placement to enable touch drag
+        "wallpaper.placementLocked": true, // Lock placement to enable touch drag
+        "wallpaper.liveTheme": true,    // Theme colors follow the Live2D model + background
+        "wallpaper.liveLayout": "independent" // independent = one model per screen | mirror = copy of the first screen
     })
 
     // What has been changed from the defaults.

@@ -16,15 +16,20 @@ Singleton {
     readonly property string mizuL2dDir: root.home + "/Projects/Tools/mizu-l2d"
     readonly property string ctlScript: root.mizuL2dDir + "/wall/mizu-l2d-ctl.py"
     readonly property string fetchScript: root.mizuL2dDir + "/scripts/fetch-model.sh"
+    readonly property string paletteTool: Directories.shell + "/palette/l2d_palette.py"
 
     // State machine: off | starting | running | stopping | error
     property string state: "off"
     property string statusText: "Stopped"
     property string currentModel: SettingsService.get("wallpaper.liveModel") || "gaoxiong_7"
     property string currentOutputs: SettingsService.get("wallpaper.liveOutputs") || ""
+    // independent = one model per screen | mirror = the first screen's model copied to the rest
+    property string currentLayout: SettingsService.get("wallpaper.liveLayout") || "independent"
     property bool tips: SettingsService.flag("wallpaper.liveTips")
     property bool placementLocked: SettingsService.flag("wallpaper.placementLocked")
     property bool gaze: SettingsService.flag("wallpaper.gazeFollow") !== false
+    // Theme colors follow the model and its background while the wall runs.
+    property bool liveTheme: SettingsService.flag("wallpaper.liveTheme") !== false
 
     readonly property string previewDir: root.home + "/.local/share/mizu/verify-shots"
 
@@ -180,12 +185,12 @@ Singleton {
     Process {
         id: configSaver
         property var onSaved: null
-        function writeConfig(model, outputs, callback) {
+        function writeConfig(model, outputs, mirror, callback) {
             configSaver.onSaved = callback || null
             configSaver.exec([
                 "python3", "-c",
-                "import sys, pathlib\npath, model, outputs = sys.argv[1:4]\np = pathlib.Path(path)\np.parent.mkdir(parents=True, exist_ok=True)\nlines = ['schema = 1\\n', '\\n', '[wall]\\n', f'model = \"{model}\"\\n']\nif outputs.strip():\n    outs = [o.strip() for o in outputs.split(',') if o.strip()]\n    lines.append('outputs = [' + ', '.join(f'\"{o}\"' for o in outs) + ']\\n')\np.write_text(''.join(lines), encoding='utf-8')",
-                root.configPath, model, outputs
+                "import sys, pathlib\npath, model, outputs, mirror = sys.argv[1:5]\np = pathlib.Path(path)\np.parent.mkdir(parents=True, exist_ok=True)\nlines = ['schema = 1\\n', '\\n', '[wall]\\n', f'model = \"{model}\"\\n']\nif outputs.strip():\n    outs = [o.strip() for o in outputs.split(',') if o.strip()]\n    lines.append('outputs = [' + ', '.join(f'\"{o}\"' for o in outs) + ']\\n')\nif mirror == 'true':\n    lines.append('mirror = true\\n')\np.write_text(''.join(lines), encoding='utf-8')",
+                root.configPath, model, outputs, mirror ? "true" : "false"
             ])
         }
         onExited: {
@@ -239,6 +244,27 @@ Singleton {
         }
     }
 
+    // Process: Live2D palette — l2d_palette.py feeds the model's background and
+    // accent to mizu_palette.py, which rewrites tokens.json (watched by Tokens)
+    // and niri's colors.kdl. A run in progress finishes first, then the latest model is done.
+    Process {
+        id: paletteProc
+        property bool again: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (paletteProc.again) {
+                    paletteProc.again = false
+                    paletteProc.exec(["python3", "-I", "-B", root.paletteTool,
+                                      root.currentModel, "--mode", SettingsService.get("theme.mode")])
+                }
+            }
+        }
+        onExited: exitCode => {
+            if (exitCode !== 0)
+                console.warn("[L2dService] Palette extraction failed, exit", exitCode)
+        }
+    }
+
     function runSystemctl(action, callback) {
         systemctlProc.onFinished = callback || null
         systemctlProc.exec(["systemctl", "--user", action, "mizu-l2d-wall.service"])
@@ -281,7 +307,7 @@ Singleton {
 
     function doStart() {
         root.statusText = "Starting Live2D wallpaper..."
-        configSaver.writeConfig(root.currentModel, root.currentOutputs, () => {
+        configSaver.writeConfig(root.currentModel, root.currentOutputs, root.currentLayout === "mirror", () => {
             runSystemctl("start", success => {
                 if (success) {
                     pollTimer.startPollCount = 0
@@ -302,6 +328,8 @@ Singleton {
             root.state = "off"
             root.statusText = "Stopped"
             root.consecutiveFailures = 0
+            // The static picture is back: its palette owns the theme again.
+            WallpaperService.runPalette()
         })
     }
 
@@ -323,7 +351,7 @@ Singleton {
         } else {
             root.currentModel = prefab
             SettingsService.set("wallpaper.liveModel", prefab)
-            configSaver.writeConfig(root.currentModel, root.currentOutputs, null)
+            configSaver.writeConfig(root.currentModel, root.currentOutputs, root.currentLayout === "mirror", null)
             root.statusText = "Ready (" + prefab + ")"
         }
     }
@@ -334,11 +362,12 @@ Singleton {
             if (ok && reply && reply.ok) {
                 root.currentModel = prefab
                 SettingsService.set("wallpaper.liveModel", prefab)
-                configSaver.writeConfig(root.currentModel, root.currentOutputs, null)
+                configSaver.writeConfig(root.currentModel, root.currentOutputs, root.currentLayout === "mirror", null)
                 root.statusText = "Running (" + prefab + ")"
                 if (root.tips) {
                     sendCtl(["tips", "true"], null)
                 }
+                root.applyPalette(false)
             } else {
                 root.statusText = "Model switch failed"
             }
@@ -348,7 +377,21 @@ Singleton {
     function setOutputs(outputs) {
         root.currentOutputs = outputs
         SettingsService.set("wallpaper.liveOutputs", outputs)
-        configSaver.writeConfig(root.currentModel, root.currentOutputs, () => {
+        configSaver.writeConfig(root.currentModel, root.currentOutputs, root.currentLayout === "mirror", () => {
+            if (root.state === "running") {
+                runSystemctl("restart", null)
+            }
+        })
+    }
+
+    // independent = a model on every screen (full interaction, one WebKit each)
+    // mirror = the first screen's model copied to the rest (one WebKit, less memory)
+    function setLayout(mode) {
+        if (mode !== "independent" && mode !== "mirror")
+            return
+        root.currentLayout = mode
+        SettingsService.set("wallpaper.liveLayout", mode)
+        configSaver.writeConfig(root.currentModel, root.currentOutputs, mode === "mirror", () => {
             if (root.state === "running") {
                 runSystemctl("restart", null)
             }
@@ -397,6 +440,41 @@ Singleton {
         }
     }
 
+    // Theme from character: while the wall runs, tokens.json follows the model
+    // and its background; turning it off puts the static wallpaper's palette back.
+    function setLiveTheme(enabled) {
+        root.liveTheme = enabled
+        SettingsService.set("wallpaper.liveTheme", enabled)
+        if (root.state === "running") {
+            if (enabled)
+                root.applyPalette(false)
+            else
+                WallpaperService.runPalette()
+        }
+    }
+
+    function toggleLiveTheme() {
+        root.setLiveTheme(!root.liveTheme)
+    }
+
+    // Rebuild the theme from the current model. Only meaningful while the host
+    // is up; `force` runs it even when liveTheme is off (the manual button).
+    function applyPalette(force) {
+        if (root.state !== "running")
+            return
+        if (!force && !root.liveTheme)
+            return
+        if (!root.isDownloaded(root.currentModel))
+            return
+        if (paletteProc.running) {
+            paletteProc.again = true
+            return
+        }
+        paletteProc.again = false
+        paletteProc.exec(["python3", "-I", "-B", root.paletteTool,
+                          root.currentModel, "--mode", SettingsService.get("theme.mode")])
+    }
+
     function resetCamera() {
         if (root.state === "running") {
             sendCtl(["camera", "reset"], null)
@@ -428,6 +506,7 @@ Singleton {
                     root.state = "running"
                     root.statusText = "Running (" + root.currentModel + ")"
                     SettingsService.set("wallpaper.live", true)
+                    root.applyPalette(false)
                 } else {
                     if (SettingsService.flag("wallpaper.live")) {
                         root.start()
@@ -457,6 +536,7 @@ Singleton {
                     if (root.tips) {
                         sendCtl(["tips", "true"], null)
                     }
+                    root.applyPalette(false)
                 } else if (startPollCount >= 15) {
                     pollTimer.stop()
                     root.state = "error"
