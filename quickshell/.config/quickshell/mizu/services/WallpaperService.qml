@@ -37,6 +37,14 @@ Singleton {
     readonly property string defaultPath: root.current
     // Upstream raised the widgets above the wallpaper while it re-stacked; nothing here needs that.
     readonly property bool restacking: false
+
+    // Screens where a live wallpaper (the Azur Lane host, mizu-l2d) draws the desktop. There the static picture
+    // steps aside, and the desktop widgets move to the Bottom layer: above the live picture, below app windows.
+    // Set over IPC: qs ipc -c mizu call mizu liveWallpaper "eDP-1,HDMI-A-1" ("" hands the screens back).
+    property var liveScreens: []
+    function covered(screenName) {
+        return root.liveScreens.indexOf(screenName) >= 0
+    }
     property bool folderPicking: false
 
     readonly property string stateScript: Directories.script("state/wallpaper-state.sh")

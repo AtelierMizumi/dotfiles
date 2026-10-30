@@ -13,7 +13,7 @@ PanelWindow {
     screen: win.modelData
 
     color: "black"
-    visible: SettingsService.flag("wallpaper.enabled")
+    visible: SettingsService.flag("wallpaper.enabled") && !WallpaperService.covered(win.screen ? win.screen.name : "")
 
     WlrLayershell.layer: WlrLayer.Background
     WlrLayershell.namespace: "mizu-wallpaper"

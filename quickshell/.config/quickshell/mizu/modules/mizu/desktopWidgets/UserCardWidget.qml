@@ -221,7 +221,7 @@ PanelWindow {
     // Up a layer while this widget is edited or moved (EditChrome.raised), so the one
     // edited last is in front of the other widgets (see EditChrome.qml); Bottom is as far
     // up as it goes, because the dock is on Top while editing (see Dock.qml).
-    WlrLayershell.layer: (chrome.raised || WallpaperService.restacking) ? WlrLayer.Bottom : WlrLayer.Background
+    WlrLayershell.layer: (chrome.raised || WallpaperService.restacking || WallpaperService.covered(win.screen ? win.screen.name : "")) ? WlrLayer.Bottom : WlrLayer.Background
     WlrLayershell.namespace: "mizu-usercard"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore

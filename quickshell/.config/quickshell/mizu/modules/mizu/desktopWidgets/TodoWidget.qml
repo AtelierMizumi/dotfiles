@@ -137,7 +137,7 @@ PanelWindow {
     visible: TodoService.loaded && win.live
 
     // The widgets rest on Background (mapped after the wallpaper, so over it), under every window.
-    WlrLayershell.layer: WlrLayer.Background
+    WlrLayershell.layer: WallpaperService.covered(win.screen ? win.screen.name : "") ? WlrLayer.Bottom : WlrLayer.Background
     WlrLayershell.namespace: "mizu-todo"
     WlrLayershell.keyboardFocus: keys.wanted ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore

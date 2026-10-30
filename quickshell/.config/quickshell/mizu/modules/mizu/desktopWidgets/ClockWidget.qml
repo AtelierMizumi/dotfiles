@@ -172,7 +172,7 @@ PanelWindow {
     visible: ClockService.loaded && win.live
 
     // The widgets rest on Background (mapped after the wallpaper, so over it), under every window.
-    WlrLayershell.layer: WlrLayer.Background
+    WlrLayershell.layer: WallpaperService.covered(win.screen ? win.screen.name : "") ? WlrLayer.Bottom : WlrLayer.Background
     WlrLayershell.namespace: "mizu-clock"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore

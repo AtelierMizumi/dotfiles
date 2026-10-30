@@ -24,3 +24,5 @@ __pycache__/
 *SESSION-LIMIT*
 .DS_Store
 quickshell/.config/quickshell/mizu-user/
+claudeworks*.txt
+ClaudeWorks*.txt

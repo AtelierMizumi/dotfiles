@@ -12,6 +12,11 @@ Item {
     IpcHandler {
         target: "mizu"
 
+        // Live wallpaper host (mizu-l2d): comma-separated screen names it draws on; "" hands them back.
+        function liveWallpaper(screens: string): void {
+            WallpaperService.liveScreens = screens === "" ? [] : screens.split(",").map(s => s.trim())
+        }
+
         function launcher(): void {
             if (!root.launcher) return
             if (root.launcher.open) {

@@ -133,7 +133,7 @@ PanelWindow {
     visible: NotesService.loaded && win.live
 
     WlrLayershell.layer: win.pinnedLayer ? WlrLayer.Top
-        : (WallpaperService.restacking ? WlrLayer.Bottom : WlrLayer.Background)
+        : ((WallpaperService.restacking || WallpaperService.covered(win.screen ? win.screen.name : "")) ? WlrLayer.Bottom : WlrLayer.Background)
     WlrLayershell.namespace: win.pinnedLayer ? "mizu-notes-pinned" : "mizu-notes"
     // Not while editing the desktop: the shelf keeps the keyboard then (Esc).
     WlrLayershell.keyboardFocus: EditMode.active || !keys.wanted ? WlrKeyboardFocus.None : WlrKeyboardFocus.OnDemand
