@@ -119,6 +119,22 @@ SettingsPage {
             onToggled: L2dService.toggleTips()
         }
 
+        SettingToggle {
+            icon: L2dService.placementLocked ? "lock" : "lock_open"
+            label: "Lock character placement"
+            detail: "Freeze position & zoom to enable interactive touch & drag on the character"
+            checked: L2dService.placementLocked
+            onToggled: L2dService.togglePlacementLocked()
+        }
+
+        SettingToggle {
+            icon: "remove_red_eye"
+            label: "Gaze follow cursor"
+            detail: "Model head & eyes smoothly follow cursor across the screen"
+            checked: L2dService.gaze
+            onToggled: L2dService.toggleGaze()
+        }
+
         Rectangle {
             id: l2dActiveFrame
             width: l2dCard.innerWidth
@@ -191,7 +207,9 @@ SettingsPage {
                     }
 
                     Text {
-                        text: "Drag desktop background to move, mouse wheel to zoom."
+                        text: L2dService.placementLocked
+                            ? "Position locked. Touch and drag the character directly to interact."
+                            : "Drag desktop background to move, mouse wheel to zoom."
                         color: mt.pInkSub
                         font.family: mt.fontFamily
                         font.pixelSize: 12
@@ -234,299 +252,289 @@ SettingsPage {
             implicitHeight: browserCol.implicitHeight
 
             property string query: ""
-            property string expandedShipId: ""
+            property string filterTab: "all"
+            property int displayLimit: 24
 
             Column {
                 id: browserCol
                 width: parent.width
-                spacing: 12
+                spacing: 14
 
                 SettingText {
                     width: parent.width
-                    label: "Search model"
+                    label: "Search character"
                     sublabel: "Filter ships by name or skin prefab"
-                    placeholder: "e.g. Takao, Laffey, gaoxiong..."
+                    placeholder: "e.g. Takao, Laffey, gaoxiong, bikini..."
                     value: l2dBrowser.query
-                    onSubmitted: text => l2dBrowser.query = text.trim()
-                    onCleared: l2dBrowser.query = ""
+                    onSubmitted: text => {
+                        l2dBrowser.query = text.trim()
+                        l2dBrowser.displayLimit = 24
+                    }
+                    onCleared: {
+                        l2dBrowser.query = ""
+                        l2dBrowser.displayLimit = 24
+                    }
                 }
 
-                Repeater {
-                    model: {
-                        const q = l2dBrowser.query.toLowerCase()
-                        const all = L2dService.catalog || []
-                        if (!q) {
-                            const downloaded = []
-                            const others = []
-                            for (let i = 0; i < all.length; i++) {
-                                const ship = all[i]
-                                const hasDl = (ship.skins || []).some(s => L2dService.isDownloaded(s.prefab))
-                                if (hasDl) downloaded.push(ship)
-                                else if (others.length < 15) others.push(ship)
-                            }
-                            return downloaded.concat(others).slice(0, 15)
+                // Filter tabs: All vs Downloaded
+                Row {
+                    spacing: 8
+
+                    SettingChip {
+                        capH: 34
+                        fontSize: 12
+                        icon: "grid_view"
+                        label: "All Models"
+                        selected: l2dBrowser.filterTab === "all"
+                        onClicked: {
+                            l2dBrowser.filterTab = "all"
+                            l2dBrowser.displayLimit = 24
                         }
-                        return all.filter(ship => {
-                            if (ship.name.toLowerCase().includes(q)) return true
-                            if (ship.cnName && ship.cnName.toLowerCase().includes(q)) return true
-                            if (ship.jpName && ship.jpName.toLowerCase().includes(q)) return true
-                            for (let j = 0; j < (ship.skins || []).length; j++) {
-                                const s = ship.skins[j]
-                                if (s.prefab.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
-                                    return true
-                            }
-                            return false
-                        }).slice(0, 30)
                     }
 
-                    delegate: Item {
-                        id: shipRow
-                        required property var modelData
-                        readonly property var ship: modelData
-                        readonly property bool isExpanded: l2dBrowser.expandedShipId === ship.id
-                        readonly property bool hasActive: (ship.skins || []).some(s => s.prefab === L2dService.currentModel)
-                        readonly property bool hasDownloaded: (ship.skins || []).some(s => L2dService.isDownloaded(s.prefab))
+                    SettingChip {
+                        capH: 34
+                        fontSize: 12
+                        icon: "download_done"
+                        label: "Downloaded (" + (L2dService.downloadedModels ? L2dService.downloadedModels.length : 0) + ")"
+                        selected: l2dBrowser.filterTab === "downloaded"
+                        onClicked: {
+                            l2dBrowser.filterTab = "downloaded"
+                            l2dBrowser.displayLimit = 24
+                        }
+                    }
+                }
 
-                        width: browserCol.width
-                        implicitHeight: shipHeader.implicitHeight + (isExpanded ? skinsCol.implicitHeight + 10 : 0)
+                // Inventory Grid of Cards
+                Flow {
+                    id: inventoryGrid
+                    width: parent.width
+                    spacing: 10
 
-                        Rectangle {
-                            id: shipHeader
-                            width: parent.width
-                            height: 48
-                            radius: 10
-                            color: isExpanded ? mt.pSurfaceHover : mt.pSurface
-                            border.color: hasActive ? mt.accentCyan : (isExpanded ? mt.accentCyan : mt.pSurfaceDivider)
-                            border.width: hasActive ? 2 : 1
+                    readonly property var skinList: {
+                        const q = l2dBrowser.query.toLowerCase()
+                        const tab = l2dBrowser.filterTab
+                        const allShips = L2dService.catalog || []
+                        const list = []
 
-                            Row {
+                        for (let i = 0; i < allShips.length; i++) {
+                            const ship = allShips[i]
+                            const skins = ship.skins || []
+                            for (let j = 0; j < skins.length; j++) {
+                                const s = skins[j]
+                                const isDl = L2dService.isDownloaded(s.prefab)
+                                if (tab === "downloaded" && !isDl) continue
+
+                                if (q) {
+                                    const matchShip = (ship.name && ship.name.toLowerCase().includes(q))
+                                        || (ship.cnName && ship.cnName.toLowerCase().includes(q))
+                                        || (ship.jpName && ship.jpName.toLowerCase().includes(q))
+                                    const matchSkin = (s.name && s.name.toLowerCase().includes(q))
+                                        || (s.prefab && s.prefab.toLowerCase().includes(q))
+                                        || (s.cnName && s.cnName.toLowerCase().includes(q))
+                                        || (s.jpName && s.jpName.toLowerCase().includes(q))
+                                    if (!matchShip && !matchSkin) continue
+                                }
+
+                                list.push({
+                                    shipName: ship.name,
+                                    shipCn: ship.cnName || "",
+                                    skinName: s.name,
+                                    prefab: s.prefab,
+                                    isDownloaded: isDl,
+                                    isActive: s.prefab === L2dService.currentModel
+                                })
+                            }
+                        }
+                        list.sort((a, b) => {
+                            if (a.isActive) return -1
+                            if (b.isActive) return 1
+                            if (a.isDownloaded !== b.isDownloaded) return a.isDownloaded ? -1 : 1
+                            return a.shipName.localeCompare(b.shipName)
+                        })
+                        return list
+                    }
+
+                    Repeater {
+                        model: inventoryGrid.skinList.slice(0, l2dBrowser.displayLimit)
+
+                        delegate: Rectangle {
+                            id: itemCard
+                            required property var modelData
+                            readonly property var skin: modelData
+                            readonly property bool isCurrent: skin.isActive
+                            readonly property bool isDownloaded: skin.isDownloaded
+                            readonly property bool isDownloadingThis: L2dService.downloadingPrefab === skin.prefab
+
+                            width: Math.floor((inventoryGrid.width - 20) / 3)
+                            height: 172
+                            radius: 12
+                            color: isCurrent ? mt.pSurfaceHover : (cardMouse.containsMouse ? mt.pSurfaceHover : mt.pSurface)
+                            border.color: isCurrent ? mt.accentCyan : (cardMouse.containsMouse ? mt.accentCyan : mt.pSurfaceDivider)
+                            border.width: isCurrent ? 2 : 1
+                            antialiasing: true
+
+                            Column {
                                 anchors.fill: parent
-                                anchors.leftMargin: 16
-                                anchors.rightMargin: 16
-                                spacing: 12
+                                anchors.margins: 4
+                                spacing: 6
 
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: isExpanded ? "▼" : "▶"
-                                    color: mt.pInkSub
-                                    font.pixelSize: 12
-                                    font.family: mt.fontFamily
-                                }
-
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: ship.name + (ship.cnName ? (" (" + ship.cnName + ")") : "")
-                                    color: hasActive ? mt.accentCyan : mt.pInk
-                                    font.family: mt.fontFamily
-                                    font.bold: hasActive || isExpanded
-                                    font.pixelSize: 15
-                                }
-
-                                Item {
-                                    width: 1
-                                    height: 1
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-
+                                // 16:9 Thumbnail
                                 Rectangle {
-                                    visible: hasDownloaded
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    height: 20
-                                    width: dlTagText.implicitWidth + 10
-                                    radius: 10
-                                    color: mt.chipFill
+                                    width: parent.width
+                                    height: Math.floor(parent.width * 9 / 16)
+                                    radius: 8
+                                    color: mt.surface
+                                    clip: true
 
-                                    Text {
-                                        id: dlTagText
-                                        anchors.centerIn: parent
-                                        text: "Downloaded"
-                                        color: mt.chipInk
-                                        font.family: mt.fontFamily
-                                        font.pixelSize: 10
-                                        font.bold: true
+                                    RoundClip {
+                                        anchors.fill: parent
+                                        radii: [8, 8, 8, 8]
+
+                                        Image {
+                                            anchors.fill: parent
+                                            source: L2dService.previewFor(skin.prefab)
+                                            sourceSize: Qt.size(240, 135)
+                                            fillMode: Image.PreserveAspectCrop
+                                            asynchronous: true
+                                        }
+                                    }
+
+                                    // Active Badge
+                                    Rectangle {
+                                        visible: isCurrent
+                                        anchors.left: parent.left
+                                        anchors.top: parent.top
+                                        anchors.margins: 4
+                                        height: 18
+                                        width: activeBadgeText.implicitWidth + 8
+                                        radius: 4
+                                        color: mt.accentCyan
+
+                                        Text {
+                                            id: activeBadgeText
+                                            anchors.centerIn: parent
+                                            text: "ACTIVE"
+                                            color: mt.textWhite
+                                            font.family: mt.fontFamily
+                                            font.pixelSize: 9
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    // Ready Badge
+                                    Rectangle {
+                                        visible: !isCurrent && isDownloaded
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        anchors.margins: 4
+                                        height: 18
+                                        width: readyBadgeText.implicitWidth + 8
+                                        radius: 4
+                                        color: mt.scrim
+
+                                        Text {
+                                            id: readyBadgeText
+                                            anchors.centerIn: parent
+                                            text: "READY"
+                                            color: mt.accentMint
+                                            font.family: mt.fontFamily
+                                            font.pixelSize: 9
+                                            font.bold: true
+                                        }
+                                    }
+
+                                    // Downloading Overlay
+                                    Rectangle {
+                                        visible: isDownloadingThis
+                                        anchors.fill: parent
+                                        color: Qt.rgba(mt.scrim.r, mt.scrim.g, mt.scrim.b, 0.82)
+
+                                        Column {
+                                            anchors.centerIn: parent
+                                            spacing: 4
+
+                                            MaterialIcon {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                name: "downloading"
+                                                size: 20
+                                                color: mt.accentCyan
+                                            }
+
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: L2dService.downloadProgress || "Downloading..."
+                                                color: mt.accentCyan
+                                                font.family: mt.fontFamily
+                                                font.pixelSize: 10
+                                            }
+                                        }
                                     }
                                 }
 
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: (ship.skins ? ship.skins.length : 0) + " skin(s)"
-                                    color: mt.pInkSub
-                                    font.family: mt.fontFamily
-                                    font.pixelSize: 12
+                                // Ship & Skin Info
+                                Column {
+                                    width: parent.width
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 4
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 4
+                                    spacing: 2
+
+                                    Text {
+                                        width: parent.width
+                                        text: skin.shipName
+                                        color: isCurrent ? mt.accentCyan : mt.pInk
+                                        font.family: mt.fontFamily
+                                        font.pixelSize: 12
+                                        font.bold: true
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        width: parent.width
+                                        text: skin.skinName
+                                        color: mt.pInkSub
+                                        font.family: mt.fontFamily
+                                        font.pixelSize: 10
+                                        elide: Text.ElideRight
+                                    }
                                 }
                             }
 
                             MouseArea {
+                                id: cardMouse
                                 anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true
+                                cursorShape: isDownloadingThis ? Qt.ArrowCursor : Qt.PointingHandCursor
                                 onClicked: {
-                                    if (l2dBrowser.expandedShipId === ship.id) {
-                                        l2dBrowser.expandedShipId = ""
+                                    if (isDownloadingThis) return
+                                    if (isDownloaded) {
+                                        L2dService.setModel(skin.prefab)
                                     } else {
-                                        l2dBrowser.expandedShipId = ship.id
+                                        L2dService.downloadModel(skin.prefab, (ok, _) => {
+                                            if (ok) {
+                                                L2dService.setModel(skin.prefab)
+                                            }
+                                        })
                                     }
                                 }
                             }
                         }
+                    }
+                }
 
-                        Column {
-                            id: skinsCol
-                            visible: isExpanded
-                            anchors.top: shipHeader.bottom
-                            anchors.topMargin: 8
-                            anchors.left: parent.left
-                            anchors.leftMargin: 16
-                            anchors.right: parent.right
-                            spacing: 8
+                // Show more button
+                Row {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: inventoryGrid.skinList.length > l2dBrowser.displayLimit
 
-                            Repeater {
-                                model: ship.skins || []
-                                delegate: Rectangle {
-                                    id: skinCard
-                                    required property var modelData
-                                    readonly property var skin: modelData
-                                    readonly property bool downloaded: L2dService.isDownloaded(skin.prefab)
-                                    readonly property bool isCurrent: L2dService.currentModel === skin.prefab
-                                    readonly property bool isDownloadingThis: L2dService.downloadingPrefab === skin.prefab
-
-                                    width: skinsCol.width
-                                    height: 56
-                                    radius: 10
-                                    color: isCurrent ? mt.pSurfaceHover : mt.pSurface
-                                    border.color: isCurrent ? mt.accentCyan : mt.pSurfaceDivider
-                                    border.width: isCurrent ? 2 : 1
-                                    antialiasing: true
-
-                                    Row {
-                                        anchors.fill: parent
-                                        anchors.margins: 6
-                                        spacing: 12
-
-                                        // Mini preview thumbnail
-                                        Rectangle {
-                                            id: miniThumb
-                                            width: 78
-                                            height: 44
-                                            radius: 6
-                                            color: mt.pSurfaceHover
-                                            border.width: 1
-                                            border.color: mt.pLine
-                                            antialiasing: true
-
-                                            RoundClip {
-                                                anchors.fill: parent
-                                                anchors.margins: 1
-                                                radii: [5, 5, 5, 5]
-
-                                                Image {
-                                                    anchors.fill: parent
-                                                    source: L2dService.previewFor(skin.prefab)
-                                                    sourceSize: Qt.size(156, 88)
-                                                    fillMode: Image.PreserveAspectCrop
-                                                    asynchronous: true
-                                                }
-                                            }
-                                        }
-
-                                        Column {
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            width: parent.width - miniThumb.width - actionButtons.width - 24
-                                            spacing: 3
-
-                                            Text {
-                                                width: parent.width
-                                                elide: Text.ElideRight
-                                                text: skin.name
-                                                color: isCurrent ? mt.accentCyan : mt.pInk
-                                                font.family: mt.fontFamily
-                                                font.pixelSize: 13
-                                                font.bold: isCurrent
-                                            }
-
-                                            Text {
-                                                width: parent.width
-                                                elide: Text.ElideRight
-                                                text: skin.prefab + (skin.cnName ? (" · " + skin.cnName) : "")
-                                                color: mt.pInkSub
-                                                font.family: mt.fontFamily
-                                                font.pixelSize: 11
-                                            }
-                                        }
-
-                                        Item {
-                                            id: actionButtons
-                                            width: rightRow.implicitWidth
-                                            height: parent.height
-                                            anchors.verticalCenter: parent.verticalCenter
-
-                                            Row {
-                                                id: rightRow
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                anchors.right: parent.right
-                                                spacing: 8
-
-                                                Rectangle {
-                                                    visible: isCurrent
-                                                    anchors.verticalCenter: parent.verticalCenter
-                                                    height: 24
-                                                    width: activeText.implicitWidth + 12
-                                                    radius: 12
-                                                    color: mt.accentCyan
-
-                                                    Text {
-                                                        id: activeText
-                                                        anchors.centerIn: parent
-                                                        text: "Active"
-                                                        color: mt.textWhite
-                                                        font.family: mt.fontFamily
-                                                        font.pixelSize: 11
-                                                        font.bold: true
-                                                    }
-                                                }
-
-                                                Rectangle {
-                                                    visible: !isCurrent
-                                                    anchors.verticalCenter: parent.verticalCenter
-                                                    height: 30
-                                                    width: btnLabel.implicitWidth + 18
-                                                    radius: 8
-                                                    color: isDownloadingThis ? mt.chipFill : (downloaded ? mt.pSurfaceHover : mt.accentCyan)
-                                                    border.width: downloaded ? 1 : 0
-                                                    border.color: mt.pLine
-
-                                                    Text {
-                                                        id: btnLabel
-                                                        anchors.centerIn: parent
-                                                        text: isDownloadingThis ? "Downloading..." : (downloaded ? "Use" : "Download")
-                                                        color: isDownloadingThis ? mt.chipInk : (downloaded ? mt.pInk : mt.textWhite)
-                                                        font.family: mt.fontFamily
-                                                        font.pixelSize: 12
-                                                        font.bold: true
-                                                    }
-
-                                                    MouseArea {
-                                                        anchors.fill: parent
-                                                        cursorShape: isDownloadingThis ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                                        enabled: !isDownloadingThis
-                                                        onClicked: {
-                                                            if (downloaded) {
-                                                                L2dService.setModel(skin.prefab)
-                                                            } else {
-                                                                L2dService.downloadModel(skin.prefab, (ok, _) => {
-                                                                    if (ok) {
-                                                                        L2dService.setModel(skin.prefab)
-                                                                    }
-                                                                })
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    SettingChip {
+                        capH: 36
+                        fontSize: 13
+                        icon: "expand_more"
+                        label: "Load more (" + (inventoryGrid.skinList.length - l2dBrowser.displayLimit) + " remaining)"
+                        onClicked: l2dBrowser.displayLimit += 24
                     }
                 }
             }

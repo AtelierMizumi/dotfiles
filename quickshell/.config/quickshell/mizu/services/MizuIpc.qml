@@ -37,6 +37,14 @@ Item {
             L2dService.resetCamera()
         }
 
+        function l2dLock(locked: bool): void {
+            L2dService.setPlacementLocked(locked)
+        }
+
+        function l2dToggleLock(): void {
+            L2dService.togglePlacementLocked()
+        }
+
         function launcher(): void {
             if (!root.launcher) return
             if (root.launcher.open) {

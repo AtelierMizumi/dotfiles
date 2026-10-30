@@ -53,6 +53,8 @@ Singleton {
         // Wi-Fi / Bluetooth / speaker icons in one pill.
         "bar.status": true,
         // ===== General =====
+        "system.language": "vi",        // vi | en
+        "wallpaper.gazeFollow": true,
         "time.use24h": true,
         // The bar's and the desktop clock's date text, a Qt date format ("M月d日 ddd" gives 10月25日 土 with a Japanese
         // locale on the shell process). Empty = the locale's short date.
@@ -132,7 +134,8 @@ Singleton {
         "wallpaper.live": false,        // Live2D live wallpaper enabled
         "wallpaper.liveModel": "gaoxiong_7", // Default Live2D model
         "wallpaper.liveOutputs": "",    // Screens to draw on ("" = all)
-        "wallpaper.liveTips": false     // Show interaction hints on Live2D model
+        "wallpaper.liveTips": false,    // Show interaction hints on Live2D model
+        "wallpaper.placementLocked": true // Lock placement to enable touch drag
     })
 
     // What has been changed from the defaults.

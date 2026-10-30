@@ -23,6 +23,8 @@ Singleton {
     property string currentModel: SettingsService.get("wallpaper.liveModel") || "gaoxiong_7"
     property string currentOutputs: SettingsService.get("wallpaper.liveOutputs") || ""
     property bool tips: SettingsService.flag("wallpaper.liveTips")
+    property bool placementLocked: SettingsService.flag("wallpaper.placementLocked")
+    property bool gaze: SettingsService.flag("wallpaper.gazeFollow") !== false
 
     readonly property string previewDir: root.home + "/.local/share/mizu/verify-shots"
 
@@ -363,6 +365,36 @@ Singleton {
 
     function toggleTips() {
         root.setTips(!root.tips)
+    }
+
+    function setPlacementLocked(locked) {
+        root.placementLocked = locked
+        SettingsService.set("wallpaper.placementLocked", locked)
+        if (root.state === "running") {
+            sendCtl(["lock", locked ? "on" : "off"], null)
+        }
+    }
+
+    function togglePlacementLocked() {
+        root.setPlacementLocked(!root.placementLocked)
+    }
+
+    function setGaze(enabled) {
+        root.gaze = enabled
+        SettingsService.set("wallpaper.gazeFollow", enabled)
+        if (root.state === "running") {
+            sendCtl(["gaze", enabled ? "on" : "off"], null)
+        }
+    }
+
+    function toggleGaze() {
+        root.setGaze(!root.gaze)
+    }
+
+    function setLanguage(lang) {
+        if (root.state === "running") {
+            sendCtl(["lang", lang], null)
+        }
     }
 
     function resetCamera() {

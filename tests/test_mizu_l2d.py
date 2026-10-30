@@ -94,6 +94,7 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         self.assertIn('"wallpaper.live": false', content)
         self.assertIn('"wallpaper.liveModel": "gaoxiong_7"', content)
         self.assertIn('"wallpaper.liveOutputs": ""', content)
+        self.assertIn('"wallpaper.placementLocked": true', content)
 
     def test_l2d_service_exists_and_declares_lifecycle(self):
         service_file = MIZU_DIR / "services/L2dService.qml"
@@ -112,6 +113,8 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         self.assertIn("function l2dEnable(on: bool)", content)
         self.assertIn("function l2dToggle()", content)
         self.assertIn("function l2dModel(prefab: string)", content)
+        self.assertIn("function l2dLock(locked: bool)", content)
+        self.assertIn("function l2dToggleLock()", content)
 
     def test_settings_page_desktop_has_live2d_card(self):
         page_file = MIZU_DIR / "modules/mizu/settings/SettingsPageDesktop.qml"
@@ -125,6 +128,7 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         self.assertIn("L2dService.resetCamera()", content)
         self.assertIn("L2dService.zoomCamera(", content)
         self.assertIn("L2dService.toggleTips()", content)
+        self.assertIn("L2dService.togglePlacementLocked()", content)
 
     def test_l2d_service_defines_tips_and_camera(self):
         service_file = MIZU_DIR / "services/L2dService.qml"
@@ -133,13 +137,34 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         self.assertIn("function setTips(enabled)", content)
         self.assertIn("function resetCamera()", content)
         self.assertIn("function zoomCamera(factor)", content)
+        self.assertIn("function setPlacementLocked(", content)
+        self.assertIn("function togglePlacementLocked()", content)
 
     def test_systemd_unit_valid(self):
         unit_file = ROOT / "systemd/.config/systemd/user/mizu-l2d-wall.service"
         self.assertTrue(unit_file.is_file())
-        content = unit_file.read_text(encoding="utf-8")
-        self.assertIn("mizu-l2d-wall.py", content)
-        self.assertIn("libgtk4-layer-shell.so", content)
+
+    def test_l2d_service_defines_gaze_and_lang(self):
+        service_file = MIZU_DIR / "services/L2dService.qml"
+        content = service_file.read_text(encoding="utf-8")
+        self.assertIn("function setGaze(enabled)", content)
+        self.assertIn("function toggleGaze()", content)
+        self.assertIn("function setLanguage(lang)", content)
+
+    def test_settings_service_defines_language_and_gaze(self):
+        settings_file = MIZU_DIR / "services/SettingsService.qml"
+        content = settings_file.read_text(encoding="utf-8")
+        self.assertIn('"system.language": "vi"', content)
+        self.assertIn('"wallpaper.gazeFollow": true', content)
+
+    def test_ctl_script_accepts_gaze_and_lang(self):
+        ctl_file = Path("/home/thuanc177/Projects/Tools/mizu-l2d/wall/mizu-l2d-ctl.py")
+        content = ctl_file.read_text(encoding="utf-8")
+        self.assertIn('"gaze"', content)
+        self.assertIn('"lang"', content)
+        wall_file = Path("/home/thuanc177/Projects/Tools/mizu-l2d/wall/mizu-l2d-wall.py")
+        wall_content = wall_file.read_text(encoding="utf-8")
+        self.assertIn("set_media_playback_requires_user_gesture(False)", wall_content)
 
 
 if __name__ == "__main__":
