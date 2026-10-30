@@ -22,6 +22,39 @@ Singleton {
     property string statusText: "Stopped"
     property string currentModel: SettingsService.get("wallpaper.liveModel") || "gaoxiong_7"
     property string currentOutputs: SettingsService.get("wallpaper.liveOutputs") || ""
+    property bool tips: SettingsService.flag("wallpaper.liveTips")
+
+    readonly property string previewDir: root.home + "/.local/share/mizu/verify-shots"
+
+    function previewFor(prefab) {
+        return "file://" + root.previewDir + "/" + prefab + ".png"
+    }
+
+    readonly property var currentSkinInfo: {
+        const p = root.currentModel || "gaoxiong_7"
+        for (let i = 0; i < root.catalog.length; i++) {
+            const ship = root.catalog[i]
+            for (let j = 0; j < (ship.skins || []).length; j++) {
+                const s = ship.skins[j]
+                if (s.prefab === p) {
+                    return {
+                        shipName: ship.name,
+                        shipSub: [ship.cnName, ship.jpName].filter(Boolean).join(" · "),
+                        skinName: s.name,
+                        skinSub: [s.cnName, s.jpName].filter(Boolean).join(" · "),
+                        prefab: p
+                    }
+                }
+            }
+        }
+        return {
+            shipName: p,
+            shipSub: "",
+            skinName: p,
+            skinSub: "",
+            prefab: p
+        }
+    }
 
     property var catalog: []
     property var downloadedModels: []
@@ -301,6 +334,9 @@ Singleton {
                 SettingsService.set("wallpaper.liveModel", prefab)
                 configSaver.writeConfig(root.currentModel, root.currentOutputs, null)
                 root.statusText = "Running (" + prefab + ")"
+                if (root.tips) {
+                    sendCtl(["tips", "true"], null)
+                }
             } else {
                 root.statusText = "Model switch failed"
             }
@@ -315,6 +351,36 @@ Singleton {
                 runSystemctl("restart", null)
             }
         })
+    }
+
+    function setTips(enabled) {
+        root.tips = enabled
+        SettingsService.set("wallpaper.liveTips", enabled)
+        if (root.state === "running") {
+            sendCtl(["tips", enabled ? "true" : "false"], null)
+        }
+    }
+
+    function toggleTips() {
+        root.setTips(!root.tips)
+    }
+
+    function resetCamera() {
+        if (root.state === "running") {
+            sendCtl(["camera", "reset"], null)
+        }
+    }
+
+    function zoomCamera(factor) {
+        if (root.state === "running") {
+            sendCtl(["camera", "zoom", String(factor)], null)
+        }
+    }
+
+    function moveCamera(dx, dy) {
+        if (root.state === "running") {
+            sendCtl(["camera", "pos", String(dx), String(dy)], null)
+        }
     }
 
     // Startup & Adoption check
@@ -356,6 +422,9 @@ Singleton {
                     root.state = "running"
                     root.statusText = "Running (" + root.currentModel + ")"
                     root.consecutiveFailures = 0
+                    if (root.tips) {
+                        sendCtl(["tips", "true"], null)
+                    }
                 } else if (startPollCount >= 15) {
                     pollTimer.stop()
                     root.state = "error"

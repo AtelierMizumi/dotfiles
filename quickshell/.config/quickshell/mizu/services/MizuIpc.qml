@@ -29,6 +29,14 @@ Item {
             L2dService.setModel(prefab)
         }
 
+        function l2dTips(on: bool): void {
+            L2dService.setTips(on)
+        }
+
+        function l2dReset(): void {
+            L2dService.resetCamera()
+        }
+
         function launcher(): void {
             if (!root.launcher) return
             if (root.launcher.open) {

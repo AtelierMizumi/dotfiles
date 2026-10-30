@@ -131,7 +131,8 @@ Singleton {
         "wallpaper.randomMinutes": 0,   // change to a random wallpaper every N minutes (0 = never)
         "wallpaper.live": false,        // Live2D live wallpaper enabled
         "wallpaper.liveModel": "gaoxiong_7", // Default Live2D model
-        "wallpaper.liveOutputs": ""     // Screens to draw on ("" = all)
+        "wallpaper.liveOutputs": "",    // Screens to draw on ("" = all)
+        "wallpaper.liveTips": false     // Show interaction hints on Live2D model
     })
 
     // What has been changed from the defaults.

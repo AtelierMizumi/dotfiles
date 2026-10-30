@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.services
+import qs.modules.common.widgets
 
 // Desktop: the wallpaper and how it changes, and the widgets on the desktop.
 // (The palette that follows the wallpaper is on the Appearance page.)
@@ -108,6 +109,123 @@ SettingsPage {
                 Quickshell.screens.map(s => ({ id: s.name, label: s.name, icon: "tv" }))
             )
             onPicked: id => L2dService.setOutputs(id === "all" ? "" : id)
+        }
+
+        SettingToggle {
+            icon: "visibility"
+            label: "Interaction hints"
+            detail: "Show interactive touch zones (hotspots) and dialogue triggers on the model"
+            checked: L2dService.tips
+            onToggled: L2dService.toggleTips()
+        }
+
+        Rectangle {
+            id: l2dActiveFrame
+            width: l2dCard.innerWidth
+            implicitHeight: Math.max(l2dThumbFrame.height, activeDetailsCol.implicitHeight) + 24
+            radius: 16
+            color: mt.pSurfaceHover
+            border.width: 1
+            border.color: mt.pLine
+            antialiasing: true
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 16
+
+                Rectangle {
+                    id: l2dThumbFrame
+                    width: 220
+                    height: 124
+                    radius: 12
+                    color: mt.pSurface
+                    border.width: 2
+                    border.color: mt.accentCyan
+                    antialiasing: true
+
+                    RoundClip {
+                        anchors.fill: parent
+                        anchors.margins: 2
+                        radii: [10, 10, 10, 10]
+
+                        Image {
+                            anchors.fill: parent
+                            source: L2dService.previewFor(L2dService.currentModel)
+                            sourceSize: Qt.size(440, 248)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                    }
+                }
+
+                Column {
+                    id: activeDetailsCol
+                    width: parent.width - l2dThumbFrame.width - 24
+                    spacing: 8
+
+                    Row {
+                        spacing: 10
+                        Text {
+                            text: L2dService.currentSkinInfo.shipName
+                            color: mt.pInk
+                            font.family: mt.fontFamily
+                            font.pixelSize: 20
+                            font.weight: Font.ExtraBold
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: L2dService.currentSkinInfo.shipSub
+                            color: mt.pInkSub
+                            font.family: mt.fontFamily
+                            font.pixelSize: 13
+                        }
+                    }
+
+                    Text {
+                        text: L2dService.currentSkinInfo.skinName + " (" + L2dService.currentModel + ")"
+                        color: mt.accentCyan
+                        font.family: mt.fontFamily
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
+
+                    Text {
+                        text: "Drag desktop background to move, mouse wheel to zoom."
+                        color: mt.pInkSub
+                        font.family: mt.fontFamily
+                        font.pixelSize: 12
+                    }
+
+                    Row {
+                        spacing: 10
+
+                        SettingChip {
+                            capH: 36
+                            fontSize: 14
+                            icon: "restart_alt"
+                            label: "Reset"
+                            onClicked: L2dService.resetCamera()
+                        }
+
+                        SettingChip {
+                            capH: 36
+                            fontSize: 14
+                            icon: "zoom_in"
+                            label: "Zoom In"
+                            onClicked: L2dService.zoomCamera(1.15)
+                        }
+
+                        SettingChip {
+                            capH: 36
+                            fontSize: 14
+                            icon: "zoom_out"
+                            label: "Zoom Out"
+                            onClicked: L2dService.zoomCamera(0.85)
+                        }
+                    }
+                }
+            }
         }
 
         Item {
@@ -259,7 +377,7 @@ SettingsPage {
                             anchors.left: parent.left
                             anchors.leftMargin: 16
                             anchors.right: parent.right
-                            spacing: 6
+                            spacing: 8
 
                             Repeater {
                                 model: ship.skins || []
@@ -272,90 +390,135 @@ SettingsPage {
                                     readonly property bool isDownloadingThis: L2dService.downloadingPrefab === skin.prefab
 
                                     width: skinsCol.width
-                                    height: 44
-                                    radius: 8
-                                    color: isCurrent ? mt.surfaceHover : mt.surface
-                                    border.color: isCurrent ? mt.accentCyan : mt.surfaceDivider
+                                    height: 56
+                                    radius: 10
+                                    color: isCurrent ? mt.pSurfaceHover : mt.pSurface
+                                    border.color: isCurrent ? mt.accentCyan : mt.pSurfaceDivider
                                     border.width: isCurrent ? 2 : 1
+                                    antialiasing: true
 
                                     Row {
                                         anchors.fill: parent
-                                        anchors.leftMargin: 14
-                                        anchors.rightMargin: 14
+                                        anchors.margins: 6
                                         spacing: 12
 
-                                        Text {
+                                        // Mini preview thumbnail
+                                        Rectangle {
+                                            id: miniThumb
+                                            width: 78
+                                            height: 44
+                                            radius: 6
+                                            color: mt.pSurfaceHover
+                                            border.width: 1
+                                            border.color: mt.pLine
+                                            antialiasing: true
+
+                                            RoundClip {
+                                                anchors.fill: parent
+                                                anchors.margins: 1
+                                                radii: [5, 5, 5, 5]
+
+                                                Image {
+                                                    anchors.fill: parent
+                                                    source: L2dService.previewFor(skin.prefab)
+                                                    sourceSize: Qt.size(156, 88)
+                                                    fillMode: Image.PreserveAspectCrop
+                                                    asynchronous: true
+                                                }
+                                            }
+                                        }
+
+                                        Column {
                                             anchors.verticalCenter: parent.verticalCenter
-                                            text: skin.name + " (" + skin.prefab + ")"
-                                            color: isCurrent ? mt.accentCyan : mt.pInk
-                                            font.family: mt.fontFamily
-                                            font.pixelSize: 13
-                                            font.bold: isCurrent
+                                            width: parent.width - miniThumb.width - actionButtons.width - 24
+                                            spacing: 3
+
+                                            Text {
+                                                width: parent.width
+                                                elide: Text.ElideRight
+                                                text: skin.name
+                                                color: isCurrent ? mt.accentCyan : mt.pInk
+                                                font.family: mt.fontFamily
+                                                font.pixelSize: 13
+                                                font.bold: isCurrent
+                                            }
+
+                                            Text {
+                                                width: parent.width
+                                                elide: Text.ElideRight
+                                                text: skin.prefab + (skin.cnName ? (" · " + skin.cnName) : "")
+                                                color: mt.pInkSub
+                                                font.family: mt.fontFamily
+                                                font.pixelSize: 11
+                                            }
                                         }
 
                                         Item {
-                                            width: 1
-                                            height: 1
+                                            id: actionButtons
+                                            width: rightRow.implicitWidth
+                                            height: parent.height
                                             anchors.verticalCenter: parent.verticalCenter
-                                        }
-                                    }
 
-                                    Row {
-                                        anchors.right: parent.right
-                                        anchors.rightMargin: 12
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        spacing: 8
+                                            Row {
+                                                id: rightRow
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                anchors.right: parent.right
+                                                spacing: 8
 
-                                        Rectangle {
-                                            visible: isCurrent
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            height: 24
-                                            width: activeText.implicitWidth + 12
-                                            radius: 12
-                                            color: mt.accentCyan
+                                                Rectangle {
+                                                    visible: isCurrent
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    height: 24
+                                                    width: activeText.implicitWidth + 12
+                                                    radius: 12
+                                                    color: mt.accentCyan
 
-                                            Text {
-                                                id: activeText
-                                                anchors.centerIn: parent
-                                                text: "Active"
-                                                color: mt.textWhite
-                                                font.family: mt.fontFamily
-                                                font.pixelSize: 11
-                                                font.bold: true
-                                            }
-                                        }
+                                                    Text {
+                                                        id: activeText
+                                                        anchors.centerIn: parent
+                                                        text: "Active"
+                                                        color: mt.textWhite
+                                                        font.family: mt.fontFamily
+                                                        font.pixelSize: 11
+                                                        font.bold: true
+                                                    }
+                                                }
 
-                                        Rectangle {
-                                            visible: !isCurrent
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            height: 28
-                                            width: btnLabel.implicitWidth + 16
-                                            radius: 6
-                                            color: isDownloadingThis ? mt.chipFill : (downloaded ? mt.surfaceTint : mt.accentCyan)
+                                                Rectangle {
+                                                    visible: !isCurrent
+                                                    anchors.verticalCenter: parent.verticalCenter
+                                                    height: 30
+                                                    width: btnLabel.implicitWidth + 18
+                                                    radius: 8
+                                                    color: isDownloadingThis ? mt.chipFill : (downloaded ? mt.pSurfaceHover : mt.accentCyan)
+                                                    border.width: downloaded ? 1 : 0
+                                                    border.color: mt.pLine
 
-                                            Text {
-                                                id: btnLabel
-                                                anchors.centerIn: parent
-                                                text: isDownloadingThis ? "Downloading..." : (downloaded ? "Use" : "Download")
-                                                color: isDownloadingThis ? mt.chipInk : (downloaded ? mt.pInk : mt.textWhite)
-                                                font.family: mt.fontFamily
-                                                font.pixelSize: 12
-                                                font.bold: true
-                                            }
+                                                    Text {
+                                                        id: btnLabel
+                                                        anchors.centerIn: parent
+                                                        text: isDownloadingThis ? "Downloading..." : (downloaded ? "Use" : "Download")
+                                                        color: isDownloadingThis ? mt.chipInk : (downloaded ? mt.pInk : mt.textWhite)
+                                                        font.family: mt.fontFamily
+                                                        font.pixelSize: 12
+                                                        font.bold: true
+                                                    }
 
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                cursorShape: isDownloadingThis ? Qt.ArrowCursor : Qt.PointingHandCursor
-                                                enabled: !isDownloadingThis
-                                                onClicked: {
-                                                    if (downloaded) {
-                                                        L2dService.setModel(skin.prefab)
-                                                    } else {
-                                                        L2dService.downloadModel(skin.prefab, (ok, _) => {
-                                                            if (ok) {
+                                                    MouseArea {
+                                                        anchors.fill: parent
+                                                        cursorShape: isDownloadingThis ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                                        enabled: !isDownloadingThis
+                                                        onClicked: {
+                                                            if (downloaded) {
                                                                 L2dService.setModel(skin.prefab)
+                                                            } else {
+                                                                L2dService.downloadModel(skin.prefab, (ok, _) => {
+                                                                    if (ok) {
+                                                                        L2dService.setModel(skin.prefab)
+                                                                    }
+                                                                })
                                                             }
-                                                        })
+                                                        }
                                                     }
                                                 }
                                             }

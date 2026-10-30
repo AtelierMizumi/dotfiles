@@ -121,6 +121,18 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         self.assertIn("L2dService.toggle()", content)
         self.assertIn("L2dService.setOutputs(", content)
         self.assertIn("L2dService.setModel(", content)
+        self.assertIn("L2dService.previewFor(", content)
+        self.assertIn("L2dService.resetCamera()", content)
+        self.assertIn("L2dService.zoomCamera(", content)
+        self.assertIn("L2dService.toggleTips()", content)
+
+    def test_l2d_service_defines_tips_and_camera(self):
+        service_file = MIZU_DIR / "services/L2dService.qml"
+        content = service_file.read_text(encoding="utf-8")
+        self.assertIn("function previewFor(prefab)", content)
+        self.assertIn("function setTips(enabled)", content)
+        self.assertIn("function resetCamera()", content)
+        self.assertIn("function zoomCamera(factor)", content)
 
     def test_systemd_unit_valid(self):
         unit_file = ROOT / "systemd/.config/systemd/user/mizu-l2d-wall.service"
