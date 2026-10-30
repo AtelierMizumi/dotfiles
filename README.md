@@ -23,6 +23,19 @@ Design Specs: [`docs/superpowers/specs/2026-10-24-niri-noctalia-rice-design.md`]
 
 ---
 
+## 🍚 Two rices, one codebase
+
+| Variant | Branch | What's different |
+| --- | --- | --- |
+| **Mizu Lite** | [`main`](https://github.com/AtelierMizumi/dotfiles) | The rice as described in this README — zero Live2D code. |
+| **Mizu Full** | [`feat/mizu-l2d`](https://github.com/AtelierMizumi/dotfiles/tree/feat/mizu-l2d) | Everything in Lite, plus the interactive [mizu-l2d](https://github.com/AtelierMizumi/mizu-l2d) wallpaper: a Live2D character on the background layer, theme colors extracted from the model, independent/mirror multi-screen layout, a Quick Panel tile, and the model browser with on-demand download. |
+
+Live2D is off by default in Full (`wallpaper.live = false`) and off means **zero**
+Live2D processes, so Full degrades gracefully to Lite behaviour. Pick a branch —
+the rest of the rice is identical.
+
+---
+
 ## 🖼️ The Rice
 
 <div align="center">
