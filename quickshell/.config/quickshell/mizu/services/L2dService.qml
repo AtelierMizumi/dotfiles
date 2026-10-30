@@ -16,7 +16,10 @@ Singleton {
     readonly property string mizuL2dDir: root.home + "/Projects/Tools/mizu-l2d"
     readonly property string ctlScript: root.mizuL2dDir + "/wall/mizu-l2d-ctl.py"
     readonly property string fetchScript: root.mizuL2dDir + "/scripts/fetch-model.sh"
+    readonly property string cacheScript: root.mizuL2dDir + "/scripts/mizu-l2d-cache.py"
     readonly property string paletteTool: Directories.shell + "/palette/l2d_palette.py"
+    // Model cache ledger, shared with the host (last-used touch) and fetch-model.py (sizes)
+    readonly property string ledgerPath: root.l2dDir + "/.ledger.json"
 
     // State machine: off | starting | running | stopping | error
     property string state: "off"
@@ -149,6 +152,8 @@ Singleton {
             root.downloadingPrefab = ""
             root.downloadProgress = ""
             root.refreshDownloaded()
+            // fetch-model.py records the prefab's size in the ledger
+            root.refreshLedger()
             if (exitCode === 0) {
                 if (root.onDownloadFinished) {
                     const cb = root.onDownloadFinished
@@ -270,6 +275,81 @@ Singleton {
         systemctlProc.exec(["systemctl", "--user", action, "mizu-l2d-wall.service"])
     }
 
+    // Model cache (mizu-l2d-cache.py): the ledger file is the shared source of
+    // truth. It is rewritten via atomic rename by every writer, so a file watch
+    // would miss updates — read it on demand instead (refreshLedger()).
+    property var cacheLedger: ({})
+    // Byte counts exceed int32 once the library is big; keep them in real.
+    readonly property real cacheDefaultQuota: 2 * 1024 * 1024 * 1024
+    readonly property real cacheBytes: {
+        let total = 0
+        const entries = root.cacheLedger.prefabs || {}
+        for (const key in entries)
+            total += entries[key].bytes || 0
+        return total
+    }
+    readonly property real cacheQuota: (root.cacheLedger.quota_bytes > 0) ? root.cacheLedger.quota_bytes : root.cacheDefaultQuota
+    readonly property int cacheModelCount: Object.keys(root.cacheLedger.prefabs || {}).length
+
+    function cacheStatusText() {
+        const gb = 1024 * 1024 * 1024
+        return (root.cacheBytes / gb).toFixed(1) + " / " + Math.round(root.cacheQuota / gb) + " GB · " +
+               root.cacheModelCount + " models"
+    }
+
+    Process {
+        id: ledgerReader
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.cacheLedger = JSON.parse(text)
+                } catch (err) {
+                    root.cacheLedger = ({})
+                }
+            }
+        }
+    }
+
+    function refreshLedger() {
+        if (!ledgerReader.running) {
+            ledgerReader.exec(["cat", root.ledgerPath])
+        }
+    }
+
+    Process {
+        id: cacheProc
+        onExited: exitCode => {
+            if (exitCode !== 0)
+                console.warn("[L2dService] Cache operation failed, exit", exitCode)
+            // the model list and the ledger may have changed under us
+            root.refreshDownloaded()
+            root.refreshLedger()
+        }
+    }
+
+    function cacheRun(args) {
+        if (cacheProc.running) {
+            console.warn("[L2dService] Cache operation already running")
+            return
+        }
+        cacheProc.exec(["python3", "-I", "-B", root.cacheScript].concat(args))
+    }
+
+    // Evict one model (the tool refuses the active or pinned ones).
+    function cacheEvict(prefab) {
+        if (/^[a-z0-9_]+$/.test(prefab))
+            root.cacheRun(["evict", prefab])
+    }
+
+    // Evict the oldest unpinned models down to the quota; active & pinned are kept.
+    function cacheClean() {
+        root.cacheRun(["enforce"])
+    }
+
+    function cachePin(prefab, on) {
+        root.cacheRun([on ? "pin" : "unpin", prefab])
+    }
+
     // Supervisor logic:
     function setEnabled(enabled) {
         SettingsService.set("wallpaper.live", enabled)
@@ -364,6 +444,8 @@ Singleton {
                 SettingsService.set("wallpaper.liveModel", prefab)
                 configSaver.writeConfig(root.currentModel, root.currentOutputs, root.currentLayout === "mirror", null)
                 root.statusText = "Running (" + prefab + ")"
+                // the host recorded the usage in the ledger
+                root.refreshLedger()
                 if (root.tips) {
                     sendCtl(["tips", "true"], null)
                 }
@@ -501,6 +583,7 @@ Singleton {
         repeat: false
         onTriggered: {
             root.refreshDownloaded()
+            root.refreshLedger()
             sendCtl(["status"], (ok, reply) => {
                 if (ok && reply && reply.ok) {
                     root.state = "running"

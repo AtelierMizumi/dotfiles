@@ -217,6 +217,53 @@ class MizuL2DIntegrationTest(unittest.TestCase):
         self.assertIn("L2dService.toggleLiveTheme()", content)
         self.assertIn("L2dService.applyPalette(true)", content)
 
+    def test_fetch_model_is_manifest_driven(self):
+        scripts = Path("/home/thuanc177/Projects/Tools/mizu-l2d/scripts")
+        sh = (scripts / "fetch-model.sh").read_text(encoding="utf-8")
+        self.assertIn("exec python3 -I -B", sh)
+        self.assertIn("fetch-model.py", sh)
+        py = (scripts / "fetch-model.py").read_text(encoding="utf-8")
+        self.assertIn("MANIFEST_NAME = \".mizu-manifest.json\"", py)
+        self.assertIn("def install_atomic(", py)
+        self.assertIn("def safe_rel(", py)
+        self.assertIn("sha256", py)
+        self.assertIn("l2d_ledger.set_bytes(", py)
+
+    def test_cache_tool_guards_eviction(self):
+        cache = Path("/home/thuanc177/Projects/Tools/mizu-l2d/scripts/mizu-l2d-cache.py")
+        content = cache.read_text(encoding="utf-8")
+        self.assertIn("def guard_evictable(", content)
+        self.assertIn("is the active model", content)
+        self.assertIn("is pinned", content)
+        self.assertIn("def do_enforce(", content)
+        self.assertIn("--dry-run", content)
+
+    def test_wall_host_touches_ledger(self):
+        wall = Path("/home/thuanc177/Projects/Tools/mizu-l2d/wall/mizu-l2d-wall.py")
+        content = wall.read_text(encoding="utf-8")
+        self.assertIn("def touch_last_used(", content)
+        self.assertIn("touch_last_used(prefab)", content)
+        self.assertIn(".ledger.json", content)
+
+    def test_l2d_service_cache_wiring(self):
+        content = (MIZU_DIR / "services/L2dService.qml").read_text(encoding="utf-8")
+        self.assertIn("mizu-l2d-cache.py", content)
+        self.assertIn("root.ledgerPath", content)
+        self.assertIn("function cacheEvict(prefab)", content)
+        self.assertIn("function cacheClean()", content)
+        self.assertIn("function cacheStatusText()", content)
+
+    def test_ipc_and_settings_expose_cache(self):
+        ipc = (MIZU_DIR / "services/MizuIpc.qml").read_text(encoding="utf-8")
+        self.assertIn("function l2dCacheStatus(): string", ipc)
+        self.assertIn("function l2dCacheEvict(prefab: string): void", ipc)
+        self.assertIn("function l2dCacheClean(): void", ipc)
+        page = MIZU_DIR / "modules/mizu/settings/SettingsPageDesktop.qml"
+        content = page.read_text(encoding="utf-8")
+        self.assertIn("Model storage", content)
+        self.assertIn("L2dService.cacheClean()", content)
+        self.assertIn("L2dService.cacheStatusText()", content)
+
     def test_palette_tooling_exists(self):
         palette_dir = MIZU_DIR / "palette"
         l2d_file = palette_dir / "l2d_palette.py"

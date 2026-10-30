@@ -53,6 +53,19 @@ Item {
             L2dService.applyPalette(true)
         }
 
+        function l2dCacheStatus(): string {
+            L2dService.refreshLedger()
+            return L2dService.cacheStatusText()
+        }
+
+        function l2dCacheEvict(prefab: string): void {
+            L2dService.cacheEvict(prefab)
+        }
+
+        function l2dCacheClean(): void {
+            L2dService.cacheClean()
+        }
+
         function launcher(): void {
             if (!root.launcher) return
             if (root.launcher.open) {

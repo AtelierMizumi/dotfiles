@@ -161,6 +161,13 @@ SettingsPage {
             onActivated: L2dService.applyPalette(true)
         }
 
+        SettingAction {
+            icon: "cleaning_services"
+            label: "Model storage"
+            detail: L2dService.cacheStatusText() + " — clean the oldest unpinned models down to the quota (the active model and pinned ones are kept, everything re-downloads on demand)"
+            onActivated: L2dService.cacheClean()
+        }
+
         Rectangle {
             id: l2dActiveFrame
             width: l2dCard.innerWidth
