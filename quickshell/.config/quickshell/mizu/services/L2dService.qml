@@ -230,8 +230,8 @@ Singleton {
             configSaver.onSaved = callback || null
             configSaver.exec([
                 "python3", "-c",
-                "import sys, pathlib\npath, model, outputs, mirror = sys.argv[1:5]\np = pathlib.Path(path)\np.parent.mkdir(parents=True, exist_ok=True)\nlines = ['schema = 1\\n', '\\n', '[wall]\\n', f'model = \"{model}\"\\n']\nif outputs.strip():\n    outs = [o.strip() for o in outputs.split(',') if o.strip()]\n    lines.append('outputs = [' + ', '.join(f'\"{o}\"' for o in outs) + ']\\n')\nif mirror == 'true':\n    lines.append('mirror = true\\n')\np.write_text(''.join(lines), encoding='utf-8')",
-                root.configPath, model, outputs, mirror ? "true" : "false"
+                "import sys, pathlib\npath, model, outputs, mirror, pause_mode = sys.argv[1:6]\np = pathlib.Path(path)\np.parent.mkdir(parents=True, exist_ok=True)\nlines = [\x27schema = 1\\n\x27, \x27\\n\x27, \x27[wall]\\n\x27, f\x27model = \"{model}\"\\n\x27]\nif outputs.strip():\n    outs = [o.strip() for o in outputs.split(\x27,\x27) if o.strip()]\n    lines.append(\x27outputs = [\x27 + \x27, \x27.join(f\x27\"{o}\"\x27 for o in outs) + \x27]\\n\x27)\nif mirror == \x27true\x27:\n    lines.append(\x27mirror = true\\n\x27)\nlines.append(f\x27pause_mode = \"{pause_mode}\"\\n\x27)\np.write_text(\x27\x27.join(lines), encoding=\x27utf-8\x27)",
+                root.configPath, model, outputs, mirror ? "true" : "false", root.currentPauseMode || "fullscreen"
             ])
         }
         onExited: {
@@ -517,6 +517,17 @@ Singleton {
                 runSystemctl("restart", null)
             }
         })
+    }
+
+    function setPauseMode(mode) {
+        if (mode !== "fullscreen" && mode !== "never" && mode !== "covered")
+            mode = "fullscreen"
+        root.currentPauseMode = mode
+        SettingsService.set("wallpaper.livePauseMode", mode)
+        configSaver.writeConfig(root.currentModel, root.currentOutputs, root.currentLayout === "mirror", null)
+        if (root.state === "running") {
+            sendCtl(["pause-mode", mode], null)
+        }
     }
 
     function setTips(enabled) {

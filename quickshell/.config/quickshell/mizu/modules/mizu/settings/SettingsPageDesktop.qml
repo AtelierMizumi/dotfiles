@@ -384,6 +384,14 @@ SettingsPage {
         }
 
         SettingToggle {
+            icon: "power_settings_new"
+            label: "Pause on fullscreen"
+            detail: "Freeze rendering when an application is fullscreen to save GPU. Disable to keep animating under transparent acrylic windows and tiling gaps."
+            checked: L2dService.currentPauseMode !== "never"
+            onToggled: L2dService.setPauseMode(checked ? "fullscreen" : "never")
+        }
+
+        SettingToggle {
             icon: "palette"
             label: "Theme colors from character"
             detail: "The shell theme follows this model and its background while the wall runs; the wallpaper's own palette returns when it stops"

@@ -37,10 +37,9 @@ Featuring a dual-shell architecture (**Mizu** via Quickshell & **Noctalia** fall
 
 ![Desktop](docs/screenshots/desktop.jpg)
 
-### 🎬 Live2D Motion & Interaction Preview
-![Live2D Motion Preview](docs/screenshots/model-preview.gif)
+### 🎬 Live2D Motion & Interaction Preview (Richelieu — 60 FPS)
 
-*(Interactive model demo with gaze follow & physics. HD Video: [model-preview.mp4](docs/screenshots/model-preview.mp4))*
+https://github.com/user-attachments/assets/7837fc0f-4e84-4f66-b99b-69ee82536004
 
 </div>
 
