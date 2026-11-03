@@ -104,7 +104,7 @@ PanelWindow {
         }
     }
 
-    readonly property string wantedScreen: win.monitor !== "" ? win.monitor : UserCardService.screenName
+    readonly property string wantedScreen: win.monitor !== "" ? win.monitor : DesktopMonitors.homeFor("usercard")
     screen: Quickshell.screens.find(s => s.name === win.wantedScreen) ?? DesktopMonitors.fallbackScreen
 
     // This monitor's scale (scale.json / services/ShellScale.qml). The card is
