@@ -395,6 +395,7 @@ Singleton {
                 } else {
                     root.state = "error"
                     root.statusText = "Failed to start mizu-l2d-wall service"
+                    WallpaperService.liveScreens = []
                 }
             })
         })
@@ -404,10 +405,12 @@ Singleton {
         if (root.state === "off" || root.state === "stopping") return
         root.state = "stopping"
         root.statusText = "Stopping Live2D wallpaper..."
+        WallpaperService.liveScreens = []
         runSystemctl("stop", _success => {
             root.state = "off"
             root.statusText = "Stopped"
             root.consecutiveFailures = 0
+            WallpaperService.liveScreens = []
             // The static picture is back: its palette owns the theme again.
             WallpaperService.runPalette()
         })
@@ -624,6 +627,7 @@ Singleton {
                     pollTimer.stop()
                     root.state = "error"
                     root.statusText = "Timeout waiting for Live2D host"
+                    WallpaperService.liveScreens = []
                 }
             })
         }
@@ -647,6 +651,7 @@ Singleton {
                     } else if (root.consecutiveFailures >= 3) {
                         root.state = "error"
                         root.statusText = "Error: Live2D host unresponsive"
+                        WallpaperService.liveScreens = []
                     }
                 }
             })

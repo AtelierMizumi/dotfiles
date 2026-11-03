@@ -17,6 +17,7 @@ ClippingRectangle {
     property var radii: [0, 0, 0, 0]
 
     color: "transparent"
+    radius: (rc.radii && rc.radii[0] === rc.radii[1] && rc.radii[1] === rc.radii[2] && rc.radii[2] === rc.radii[3]) ? rc.radii[0] : 0
     topLeftRadius: rc.radii[0]
     topRightRadius: rc.radii[1]
     bottomLeftRadius: rc.radii[2]

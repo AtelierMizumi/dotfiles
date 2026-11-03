@@ -12,8 +12,12 @@ PanelWindow {
     required property var modelData
     screen: win.modelData
 
+    readonly property var targetScreen: win.modelData
+    readonly property string screenName: targetScreen ? targetScreen.name : ""
+    readonly property real dpr: targetScreen ? targetScreen.devicePixelRatio : 1
+
     color: "black"
-    visible: SettingsService.flag("wallpaper.enabled") && !WallpaperService.covered(win.screen ? win.screen.name : "")
+    visible: SettingsService.flag("wallpaper.enabled") && !WallpaperService.covered(win.screenName)
 
     WlrLayershell.layer: WlrLayer.Background
     WlrLayershell.namespace: "mizu-wallpaper"
@@ -27,10 +31,11 @@ PanelWindow {
     }
 
     property bool firstOnTop: true
-    readonly property url wanted: WallpaperService.imageFor(win.screen ? win.screen.name : "")
+    readonly property url wanted: WallpaperService.imageFor(win.screenName)
     readonly property real fadeMs: SettingsService.get("wallpaper.duration")
 
     onWantedChanged: win.load()
+    onVisibleChanged: if (visible) win.load()
     Component.onCompleted: win.load()
 
     function load() {
@@ -58,8 +63,8 @@ PanelWindow {
         asynchronous: true
         cache: false
         autoTransform: true
-        sourceSize.width: win.width * (win.screen ? win.screen.devicePixelRatio : 1)
-        sourceSize.height: win.height * (win.screen ? win.screen.devicePixelRatio : 1)
+        sourceSize.width: win.width * win.dpr
+        sourceSize.height: win.height * win.dpr
         opacity: win.firstOnTop ? 1 : 0
         onStatusChanged: if (status === Image.Ready) win.ready(first)
         Behavior on opacity { NumberAnimation { duration: win.fadeMs; easing.type: Easing.InOutQuad } }
@@ -72,8 +77,8 @@ PanelWindow {
         asynchronous: true
         cache: false
         autoTransform: true
-        sourceSize.width: win.width * (win.screen ? win.screen.devicePixelRatio : 1)
-        sourceSize.height: win.height * (win.screen ? win.screen.devicePixelRatio : 1)
+        sourceSize.width: win.width * win.dpr
+        sourceSize.height: win.height * win.dpr
         opacity: win.firstOnTop ? 0 : 1
         onStatusChanged: if (status === Image.Ready) win.ready(second)
         Behavior on opacity { NumberAnimation { duration: win.fadeMs; easing.type: Easing.InOutQuad } }

@@ -9,6 +9,7 @@ SettingsPage {
     id: page
 
     SectionCard {
+        id: wallpaperCard
         title: "Wallpaper"
 
         SettingToggle {
@@ -85,6 +86,242 @@ SettingsPage {
             label: "Rescan the folder"
             detail: WallpaperService.files.length + (WallpaperService.files.length === 1 ? " picture" : " pictures")
             onActivated: WallpaperService.rescan()
+        }
+
+        // Folder choices: All plus first-level subfolders
+        readonly property var folderChoices: {
+            const out = [{ path: "", label: "All" }]
+            const seen = ({})
+            for (let i = 0; i < WallpaperService.folders.length; i++) {
+                const f = WallpaperService.folders[i]
+                if (f in seen)
+                    continue
+                seen[f] = true
+                const name = f.slice(f.lastIndexOf("/") + 1)
+                out.push({ path: f, label: name.charAt(0).toUpperCase() + name.slice(1) })
+            }
+            return out
+        }
+
+        // Search wallpaper by filename
+        SettingText {
+            width: wallpaperCard.innerWidth
+            label: "Search wallpaper"
+            sublabel: "Filter pictures by filename"
+            placeholder: "e.g. anime, mountain, cyberpunk..."
+            value: wpBrowser.query
+            onSubmitted: text => {
+                wpBrowser.query = text.trim()
+                wpGrid.pageIndex = 0
+            }
+            onCleared: {
+                wpBrowser.query = ""
+                wpGrid.pageIndex = 0
+            }
+        }
+
+        // Folder Chips
+        Flow {
+            width: wallpaperCard.innerWidth
+            spacing: 10
+
+            Repeater {
+                model: wallpaperCard.folderChoices
+
+                delegate: SettingChip {
+                    required property var modelData
+
+                    label: modelData.label
+                    icon: modelData.path === "" ? "photo_library" : "folder"
+                    selected: WallpaperService.customFolder === modelData.path
+                    onClicked: {
+                        WallpaperService.setFolder(modelData.path)
+                        wpGrid.pageIndex = 0
+                    }
+                }
+            }
+        }
+
+        // Wallpaper Grid with 12 items per page (3 rows x 4 columns) & Pagination
+        Item {
+            id: wpBrowser
+            width: wallpaperCard.innerWidth
+            implicitHeight: wpBrowser.filteredFiles.length === 0
+                    ? 140 : wpGrid.height + (wpPager.visible ? wpPager.height + 14 : 0)
+
+            property string query: ""
+
+            readonly property var filteredFiles: {
+                const q = wpBrowser.query.toLowerCase().trim()
+                const all = WallpaperService.files || []
+                if (!q) return all
+                return all.filter(f => {
+                    const name = f.slice(f.lastIndexOf("/") + 1).toLowerCase()
+                    return name.includes(q)
+                })
+            }
+
+            GridView {
+                id: wpGrid
+
+                readonly property real gap: 12
+                readonly property int columns: 4
+                readonly property int rows: 3
+                readonly property int perPage: wpGrid.rows * wpGrid.columns
+                property int pageIndex: 0
+                readonly property int pageCount: Math.max(1, Math.ceil(wpBrowser.filteredFiles.length / wpGrid.perPage))
+
+                readonly property real cellW: Math.floor((wpBrowser.width - (wpGrid.columns - 1) * wpGrid.gap) / wpGrid.columns)
+                readonly property real cellH: Math.round(wpGrid.cellW * 9 / 16)
+
+                width: wpBrowser.width
+                height: wpGrid.rows * wpGrid.cellH + (wpGrid.rows - 1) * wpGrid.gap
+                visible: wpBrowser.filteredFiles.length > 0
+                interactive: false
+                clip: true
+                cellWidth: wpGrid.cellW + wpGrid.gap
+                cellHeight: wpGrid.cellH + wpGrid.gap
+                model: wpBrowser.filteredFiles.slice(wpGrid.pageIndex * wpGrid.perPage, (wpGrid.pageIndex + 1) * wpGrid.perPage)
+
+                delegate: Rectangle {
+                    id: wpCell
+
+                    required property string modelData
+
+                    readonly property string thumb: WallpaperService.thumbs[wpCell.modelData] ?? ""
+                    readonly property bool current: wpCell.modelData === WallpaperService.current
+                    readonly property bool hovered: wpArea.containsMouse
+
+                    width: wpGrid.cellW
+                    height: wpGrid.cellH
+                    radius: 14
+                    color: mt.pSurfaceHover
+                    border.width: 3
+                    border.color: wpCell.current ? mt.accentMint : wpCell.hovered ? mt.pInkSub : mt.pLine
+                    antialiasing: true
+
+                    Behavior on border.color {
+                        ColorAnimation { duration: 120 }
+                    }
+
+                    RoundClip {
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        radii: [11, 11, 11, 11]
+
+                        Image {
+                            anchors.fill: parent
+                            source: "file://" + (wpCell.thumb !== "" ? wpCell.thumb : wpCell.modelData)
+                            sourceSize: Qt.size(wpGrid.cellW * 1.5, wpGrid.cellH * 1.5)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                    }
+
+                    // The one on the desktop now
+                    Rectangle {
+                        anchors.centerIn: parent
+                        visible: wpCell.current
+                        width: 44
+                        height: 44
+                        radius: 22
+                        color: Qt.rgba(0, 0, 0, 0.45)
+                        antialiasing: true
+
+                        MaterialIcon {
+                            anchors.centerIn: parent
+                            size: 28
+                            name: "check"
+                            weight: mt.settingsIconWeight
+                            color: mt.accentMint
+                        }
+                    }
+
+                    MouseArea {
+                        id: wpArea
+
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: WallpaperService.setWallpaper(wpCell.modelData, "")
+                    }
+                }
+            }
+
+            // Pager for static wallpaper
+            Row {
+                id: wpPager
+
+                visible: wpBrowser.filteredFiles.length > 0 && wpGrid.pageCount > 1
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: wpGrid.bottom
+                anchors.topMargin: 14
+                spacing: 14
+
+                SettingChip {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "chevron_left"
+                    opacity: wpGrid.pageIndex > 0 ? 1 : 0.45
+                    onClicked: if (wpGrid.pageIndex > 0) wpGrid.pageIndex--
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: (wpGrid.pageIndex + 1) + " / " + wpGrid.pageCount
+                    color: mt.pInk
+                    font.family: mt.fontFamily
+                    font.pixelSize: 18
+                    font.weight: Font.ExtraBold
+                    font.styleName: mt.fontStyleBold
+                }
+
+                SettingChip {
+                    anchors.verticalCenter: parent.verticalCenter
+                    icon: "chevron_right"
+                    opacity: wpGrid.pageIndex < wpGrid.pageCount - 1 ? 1 : 0.45
+                    onClicked: if (wpGrid.pageIndex < wpGrid.pageCount - 1) wpGrid.pageIndex++
+                }
+            }
+
+            // Empty state notice
+            Column {
+                anchors.centerIn: parent
+                visible: wpBrowser.filteredFiles.length === 0
+                spacing: 8
+
+                MaterialIcon {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    size: 40
+                    name: "folder_open"
+                    weight: mt.settingsIconWeight
+                    color: mt.pInkSub
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: wpBrowser.query !== "" ? "No wallpapers matching \"" + wpBrowser.query + "\""
+                        : "No pictures in " + WallpaperService.directoryShort
+                    color: mt.pInkSub
+                    font.family: mt.fontFamily
+                    font.pixelSize: 16
+                    font.weight: Font.DemiBold
+                }
+            }
+        }
+
+        Connections {
+            target: WallpaperService
+
+            function onCurrentChanged() {
+                const at = wpBrowser.filteredFiles.indexOf(WallpaperService.current)
+                if (at >= 0)
+                    wpGrid.pageIndex = Math.floor(at / wpGrid.perPage)
+            }
+
+            function onFilesChanged() {
+                if (wpGrid.pageIndex > wpGrid.pageCount - 1)
+                    wpGrid.pageIndex = Math.max(0, wpGrid.pageCount - 1)
+            }
         }
     }
 
@@ -286,7 +523,9 @@ SettingsPage {
 
             property string query: ""
             property string filterTab: "all"
-            property int displayLimit: 24
+            readonly property int perPage: 12
+            property int pageIndex: 0
+            readonly property int pageCount: Math.max(1, Math.ceil(inventoryGrid.skinList.length / l2dBrowser.perPage))
 
             Column {
                 id: browserCol
@@ -301,11 +540,11 @@ SettingsPage {
                     value: l2dBrowser.query
                     onSubmitted: text => {
                         l2dBrowser.query = text.trim()
-                        l2dBrowser.displayLimit = 24
+                        l2dBrowser.pageIndex = 0
                     }
                     onCleared: {
                         l2dBrowser.query = ""
-                        l2dBrowser.displayLimit = 24
+                        l2dBrowser.pageIndex = 0
                     }
                 }
 
@@ -321,7 +560,7 @@ SettingsPage {
                         selected: l2dBrowser.filterTab === "all"
                         onClicked: {
                             l2dBrowser.filterTab = "all"
-                            l2dBrowser.displayLimit = 24
+                            l2dBrowser.pageIndex = 0
                         }
                     }
 
@@ -333,12 +572,12 @@ SettingsPage {
                         selected: l2dBrowser.filterTab === "downloaded"
                         onClicked: {
                             l2dBrowser.filterTab = "downloaded"
-                            l2dBrowser.displayLimit = 24
+                            l2dBrowser.pageIndex = 0
                         }
                     }
                 }
 
-                // Inventory Grid of Cards
+                // Inventory Grid of Cards (12 models per page, 3 columns)
                 Flow {
                     id: inventoryGrid
                     width: parent.width
@@ -389,7 +628,7 @@ SettingsPage {
                     }
 
                     Repeater {
-                        model: inventoryGrid.skinList.slice(0, l2dBrowser.displayLimit)
+                        model: inventoryGrid.skinList.slice(l2dBrowser.pageIndex * l2dBrowser.perPage, (l2dBrowser.pageIndex + 1) * l2dBrowser.perPage)
 
                         delegate: Rectangle {
                             id: itemCard
@@ -400,8 +639,9 @@ SettingsPage {
                             readonly property bool isDownloadingThis: L2dService.downloadingPrefab === skin.prefab
 
                             width: Math.floor((inventoryGrid.width - 20) / 3)
-                            height: 172
+                            height: thumbBox.height + infoCol.height + 18
                             radius: 12
+                            clip: true
                             color: isCurrent ? mt.pSurfaceHover : (cardMouse.containsMouse ? mt.pSurfaceHover : mt.pSurface)
                             border.color: isCurrent ? mt.accentCyan : (cardMouse.containsMouse ? mt.accentCyan : mt.pSurfaceDivider)
                             border.width: isCurrent ? 2 : 1
@@ -409,11 +649,12 @@ SettingsPage {
 
                             Column {
                                 anchors.fill: parent
-                                anchors.margins: 4
-                                spacing: 6
+                                anchors.margins: 5
+                                spacing: 5
 
                                 // 16:9 Thumbnail
                                 Rectangle {
+                                    id: thumbBox
                                     width: parent.width
                                     height: Math.floor(parent.width * 9 / 16)
                                     radius: 8
@@ -427,7 +668,7 @@ SettingsPage {
                                         Image {
                                             anchors.fill: parent
                                             source: L2dService.previewFor(skin.prefab)
-                                            sourceSize: Qt.size(240, 135)
+                                            sourceSize: Qt.size(thumbBox.width * 2, thumbBox.height * 2)
                                             fillMode: Image.PreserveAspectCrop
                                             asynchronous: true
                                         }
@@ -507,11 +748,8 @@ SettingsPage {
 
                                 // Ship & Skin Info
                                 Column {
+                                    id: infoCol
                                     width: parent.width
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 4
-                                    anchors.right: parent.right
-                                    anchors.rightMargin: 4
                                     spacing: 2
 
                                     Text {
@@ -557,17 +795,73 @@ SettingsPage {
                     }
                 }
 
-                // Show more button
+                // Pager for Live2D
                 Row {
+                    id: l2dPager
+                    visible: inventoryGrid.skinList.length > 0 && l2dBrowser.pageCount > 1
                     anchors.horizontalCenter: parent.horizontalCenter
-                    visible: inventoryGrid.skinList.length > l2dBrowser.displayLimit
+                    spacing: 14
 
                     SettingChip {
-                        capH: 36
-                        fontSize: 13
-                        icon: "expand_more"
-                        label: "Load more (" + (inventoryGrid.skinList.length - l2dBrowser.displayLimit) + " remaining)"
-                        onClicked: l2dBrowser.displayLimit += 24
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: "chevron_left"
+                        opacity: l2dBrowser.pageIndex > 0 ? 1 : 0.45
+                        onClicked: if (l2dBrowser.pageIndex > 0) l2dBrowser.pageIndex--
+                    }
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: (l2dBrowser.pageIndex + 1) + " / " + l2dBrowser.pageCount
+                        color: mt.pInk
+                        font.family: mt.fontFamily
+                        font.pixelSize: 18
+                        font.weight: Font.ExtraBold
+                        font.styleName: mt.fontStyleBold
+                    }
+
+                    SettingChip {
+                        anchors.verticalCenter: parent.verticalCenter
+                        icon: "chevron_right"
+                        opacity: l2dBrowser.pageIndex < l2dBrowser.pageCount - 1 ? 1 : 0.45
+                        onClicked: if (l2dBrowser.pageIndex < l2dBrowser.pageCount - 1) l2dBrowser.pageIndex++
+                    }
+                }
+
+                // Empty state
+                Column {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    visible: inventoryGrid.skinList.length === 0
+                    spacing: 8
+
+                    MaterialIcon {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        size: 40
+                        name: "search_off"
+                        weight: mt.settingsIconWeight
+                        color: mt.pInkSub
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "No models found matching \"" + l2dBrowser.query + "\""
+                        color: mt.pInkSub
+                        font.family: mt.fontFamily
+                        font.pixelSize: 16
+                        font.weight: Font.DemiBold
+                    }
+                }
+            }
+        }
+
+        Connections {
+            target: L2dService
+
+            function onCurrentModelChanged() {
+                const list = inventoryGrid.skinList
+                for (let i = 0; i < list.length; i++) {
+                    if (list[i].prefab === L2dService.currentModel) {
+                        l2dBrowser.pageIndex = Math.floor(i / l2dBrowser.perPage)
+                        break
                     }
                 }
             }
