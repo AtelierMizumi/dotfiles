@@ -37,6 +37,11 @@ Featuring a dual-shell architecture (**Mizu** via Quickshell & **Noctalia** fall
 
 ![Desktop](docs/screenshots/desktop.jpg)
 
+### 🎬 Live2D Motion & Interaction Preview
+![Live2D Motion Preview](docs/screenshots/model-preview.gif)
+
+*(Interactive model demo with gaze follow & physics. HD Video: [model-preview.mp4](docs/screenshots/model-preview.mp4))*
+
 </div>
 
 <div align="center">
