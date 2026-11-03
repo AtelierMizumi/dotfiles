@@ -283,7 +283,7 @@ ShellRoot {
         id: clockGate
         widgetId: "clock"
         unloads: true
-        screenName: EditMode.homeScreen(ClockService.screenName)
+        screenName: DesktopMonitors.homeFor("clock")
     }
 
     LazyLoader {
@@ -308,7 +308,7 @@ ShellRoot {
         id: weathercardGate
         widgetId: "weathercard"
         unloads: true
-        screenName: EditMode.homeScreen(WeatherCardService.screenName)
+        screenName: DesktopMonitors.homeFor("weathercard")
     }
 
     LazyLoader {
@@ -333,7 +333,7 @@ ShellRoot {
         id: calendarcardGate
         widgetId: "calendarcard"
         unloads: true
-        screenName: EditMode.homeScreen(CalendarCardService.screenName)
+        screenName: DesktopMonitors.homeFor("calendarcard")
     }
 
     LazyLoader {
@@ -358,7 +358,7 @@ ShellRoot {
         id: lyricsGate
         widgetId: "lyrics"
         unloads: true
-        screenName: EditMode.homeScreen(LyricsService.screenName)
+        screenName: DesktopMonitors.homeFor("lyrics")
     }
 
     LazyLoader {
@@ -383,7 +383,7 @@ ShellRoot {
         id: usercardGate
         widgetId: "usercard"
         unloads: true
-        screenName: EditMode.homeScreen(UserCardService.screenName)
+        screenName: DesktopMonitors.homeFor("usercard")
     }
 
     LazyLoader {

@@ -49,7 +49,7 @@ Singleton {
 
     readonly property var fallbackScreen: Quickshell.screens.find(s => s.name === root.fallbackName) ?? Quickshell.screens[0]
 
-    // The monitor of the To-Do (id "todo") or the Sticky Notes (id "notes").
+    // The monitor of any desktop widget by id ("clock", "weathercard", "calendarcard", "lyrics", "usercard", "todo", "notes").
     function homeFor(id) {
         const n = root.homes[id] ?? ""
         return root.plugged(n) ? n : root.fallbackName

@@ -106,7 +106,7 @@ PanelWindow {
         }
     }
 
-    readonly property string wantedScreen: win.monitor !== "" ? win.monitor : WeatherCardService.screenName
+    readonly property string wantedScreen: win.monitor !== "" ? win.monitor : DesktopMonitors.homeFor("weathercard")
     screen: Quickshell.screens.find(s => s.name === win.wantedScreen) ?? DesktopMonitors.fallbackScreen
 
     // This monitor's scale (services/ShellScale.qml). The card is drawn in design pixels inside a ScaleHost, so

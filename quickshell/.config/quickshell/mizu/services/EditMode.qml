@@ -70,8 +70,7 @@ Singleton {
 
     // The monitor the main copy is on.
     function homeOf(id) {
-        const s = root.svcOf(id)
-        return s ? root.homeScreen(s.screenName) : ""
+        return DesktopMonitors.homeFor(id)
     }
 
     // ===== Lock all =====
