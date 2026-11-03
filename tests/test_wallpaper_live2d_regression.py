@@ -74,6 +74,18 @@ class L2dServiceSafetyTest(unittest.TestCase):
         """Stopping L2dService must immediately clear WallpaperService.liveScreens."""
         self.assertIn("WallpaperService.liveScreens = []", self.content)
 
+    def test_bundled_fallbacks_and_catalog_parsing(self):
+        """L2dService must provide bundled fallbacks for dotfiles importers and robust parsing."""
+        self.assertIn("readonly property string bundledScriptsDir: Directories.script(\"l2d\")", self.content)
+        self.assertIn("readonly property string bundledMappingPath: Directories.shell + \"/data/l2d_mapping.json\"", self.content)
+        self.assertIn("function parseCatalog(raw)", self.content)
+        self.assertIn("function ensureCatalogLoaded()", self.content)
+        # Verify bundled resources exist in the tree
+        data_file = MIZU_DIR / "data/l2d_mapping.json"
+        self.assertTrue(data_file.is_file(), f"missing bundled mapping {data_file}")
+        script_file = MIZU_DIR / "scripts/l2d/fetch-model.sh"
+        self.assertTrue(script_file.is_file(), f"missing bundled script {script_file}")
+
 
 class SettingsPageDesktopRegressionTest(unittest.TestCase):
     """Verifies SettingsPageDesktop has wallpaper browser, search, and refined Live2D pagination."""
@@ -117,6 +129,12 @@ class SettingsPageDesktopRegressionTest(unittest.TestCase):
         col_snippet = self.content[info_col_idx:info_col_idx + 250]
         self.assertNotIn("anchors.left: parent.left", col_snippet)
         self.assertNotIn("anchors.right: parent.right", col_snippet)
+
+    def test_live2d_frame_and_browser_have_height_bindings(self):
+        """l2dActiveFrame, l2dBrowser, and inventoryGrid must have height bindings to prevent collapsing in Flow."""
+        self.assertIn("id: l2dActiveFrame\n            width: l2dCard.innerWidth\n            height: implicitHeight", self.content)
+        self.assertIn("id: l2dBrowser\n            width: l2dCard.innerWidth\n            height: implicitHeight", self.content)
+        self.assertIn("id: inventoryGrid\n                    width: parent.width\n                    spacing: 10\n", self.content)
 
 
 class PaginationAndFilterLogicTest(unittest.TestCase):

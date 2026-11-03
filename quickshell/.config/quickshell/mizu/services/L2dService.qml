@@ -11,12 +11,19 @@ Singleton {
     readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ("/run/user/" + Quickshell.env("UID"))
     readonly property string socketPath: root.runtimeDir + "/mizu-l2d-wall.sock"
     readonly property string configPath: root.home + "/.config/mizu-l2d/config.toml"
-    readonly property string mappingPath: root.home + "/.local/share/mizu/data/l2d_mapping.json"
+
+    readonly property string bundledScriptsDir: Directories.script("l2d")
+    readonly property string bundledMappingPath: Directories.shell + "/data/l2d_mapping.json"
+    readonly property string userMappingPath: root.home + "/.local/share/mizu/data/l2d_mapping.json"
+    readonly property string mappingPath: root.userMappingPath
+
     readonly property string l2dDir: root.home + "/.local/share/mizu/l2d"
     readonly property string mizuL2dDir: root.home + "/Projects/Tools/mizu-l2d"
-    readonly property string ctlScript: root.mizuL2dDir + "/wall/mizu-l2d-ctl.py"
-    readonly property string fetchScript: root.mizuL2dDir + "/scripts/fetch-model.sh"
-    readonly property string cacheScript: root.mizuL2dDir + "/scripts/mizu-l2d-cache.py"
+
+    // Bundled fallback for dotfiles importers, external fallback to mizu-l2d
+    readonly property string ctlScript: bundledScriptsDir + "/mizu-l2d-ctl.py"
+    readonly property string fetchScript: bundledScriptsDir + "/fetch-model.sh"
+    readonly property string cacheScript: bundledScriptsDir + "/mizu-l2d-cache.py"
     readonly property string paletteTool: Directories.shell + "/palette/l2d_palette.py"
     // Model cache ledger, shared with the host (last-used touch) and fetch-model.py (sizes)
     readonly property string ledgerPath: root.l2dDir + "/.ledger.json"
@@ -76,41 +83,70 @@ Singleton {
     readonly property bool running: state === "running"
     readonly property bool isDownloading: downloadingPrefab !== ""
 
+    function parseCatalog(raw) {
+        if (!raw || raw.trim() === "") return
+        try {
+            const data = JSON.parse(raw)
+            const list = []
+            for (const shipId in data) {
+                const ship = data[shipId]
+                const enName = (ship.names && ship.names.EN) ? ship.names.EN : ("Ship " + shipId)
+                const skins = (ship.skins || []).map(s => ({
+                    prefab: s.prefab,
+                    name: (s.names && s.names.EN) ? s.names.EN : s.prefab,
+                    cnName: (s.names && s.names.CN) ? s.names.CN : "",
+                    jpName: (s.names && s.names.JP) ? s.names.JP : "",
+                    bg: s.bg || ""
+                }))
+                list.push({
+                    id: shipId,
+                    name: enName,
+                    cnName: (ship.names && ship.names.CN) ? ship.names.CN : "",
+                    jpName: (ship.names && ship.names.JP) ? ship.names.JP : "",
+                    skins: skins
+                })
+            }
+            list.sort((a, b) => a.name.localeCompare(b.name))
+            root.catalog = list
+        } catch (err) {
+            console.warn("[L2dService] Failed to parse l2d_mapping.json:", err)
+        }
+    }
+
     // Read l2d_mapping.json for ship/skin catalog
     FileView {
         id: mappingFile
-        path: root.mappingPath
+        path: root.userMappingPath
         watchChanges: false
         onLoaded: {
-            try {
-                const data = JSON.parse(mappingFile.text())
-                const list = []
-                for (const shipId in data) {
-                    const ship = data[shipId]
-                    const enName = (ship.names && ship.names.EN) ? ship.names.EN : ("Ship " + shipId)
-                    const skins = (ship.skins || []).map(s => ({
-                        prefab: s.prefab,
-                        name: (s.names && s.names.EN) ? s.names.EN : s.prefab,
-                        cnName: (s.names && s.names.CN) ? s.names.CN : "",
-                        jpName: (s.names && s.names.JP) ? s.names.JP : "",
-                        bg: s.bg || ""
-                    }))
-                    list.push({
-                        id: shipId,
-                        name: enName,
-                        cnName: (ship.names && ship.names.CN) ? ship.names.CN : "",
-                        jpName: (ship.names && ship.names.JP) ? ship.names.JP : "",
-                        skins: skins
-                    })
-                }
-                list.sort((a, b) => a.name.localeCompare(b.name))
-                root.catalog = list
-            } catch (err) {
-                console.warn("[L2dService] Failed to parse l2d_mapping.json:", err)
-            }
+            root.parseCatalog(mappingFile.text())
         }
         onLoadFailed: error => {
-            console.warn("[L2dService] Failed to load l2d_mapping.json:", error)
+            console.warn("[L2dService] Failed to load user l2d_mapping.json, falling back to bundled:", error)
+            mappingFile.path = root.bundledMappingPath
+        }
+    }
+
+    Process {
+        id: mappingReader
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.parseCatalog(text)
+            }
+        }
+    }
+
+    function ensureCatalogLoaded() {
+        if (root.catalog.length > 0) return
+        if (mappingFile.text()) {
+            root.parseCatalog(mappingFile.text())
+        }
+        if (root.catalog.length === 0) {
+            mappingReader.exec([
+                "sh", "-c",
+                "cat \"$1\" 2>/dev/null || cat \"$2\" 2>/dev/null",
+                "sh", root.userMappingPath, root.bundledMappingPath
+            ])
         }
     }
 
@@ -585,6 +621,7 @@ Singleton {
         running: true
         repeat: false
         onTriggered: {
+            root.ensureCatalogLoaded()
             root.refreshDownloaded()
             root.refreshLedger()
             sendCtl(["status"], (ok, reply) => {

@@ -408,6 +408,7 @@ SettingsPage {
         Rectangle {
             id: l2dActiveFrame
             width: l2dCard.innerWidth
+            height: implicitHeight
             implicitHeight: Math.max(l2dThumbFrame.height, activeDetailsCol.implicitHeight) + 24
             radius: 16
             color: mt.pSurfaceHover
@@ -519,6 +520,7 @@ SettingsPage {
         Item {
             id: l2dBrowser
             width: l2dCard.innerWidth
+            height: implicitHeight
             implicitHeight: browserCol.implicitHeight
 
             property string query: ""
@@ -531,6 +533,7 @@ SettingsPage {
                 id: browserCol
                 width: parent.width
                 spacing: 14
+                height: childrenRect.height
 
                 SettingText {
                     width: parent.width
@@ -583,17 +586,20 @@ SettingsPage {
                     width: parent.width
                     spacing: 10
 
+
                     readonly property var skinList: {
                         const q = l2dBrowser.query.toLowerCase()
                         const tab = l2dBrowser.filterTab
                         const allShips = L2dService.catalog || []
                         const list = []
+                        const seenPrefabs = ({})
 
                         for (let i = 0; i < allShips.length; i++) {
                             const ship = allShips[i]
                             const skins = ship.skins || []
                             for (let j = 0; j < skins.length; j++) {
                                 const s = skins[j]
+                                seenPrefabs[s.prefab] = true
                                 const isDl = L2dService.isDownloaded(s.prefab)
                                 if (tab === "downloaded" && !isDl) continue
 
@@ -618,6 +624,23 @@ SettingsPage {
                                 })
                             }
                         }
+
+                        // Disk fallback: Ensure any model on disk in downloadedModels is never hidden
+                        const dl = L2dService.downloadedModels || []
+                        for (let k = 0; k < dl.length; k++) {
+                            const pref = dl[k]
+                            if (seenPrefabs[pref]) continue
+                            if (q && !pref.toLowerCase().includes(q)) continue
+                            list.push({
+                                shipName: pref,
+                                shipCn: "",
+                                skinName: "Live2D Model",
+                                prefab: pref,
+                                isDownloaded: true,
+                                isActive: pref === L2dService.currentModel
+                            })
+                        }
+
                         list.sort((a, b) => {
                             if (a.isActive) return -1
                             if (b.isActive) return 1

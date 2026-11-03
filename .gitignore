@@ -29,3 +29,7 @@ ClaudeWorks*.txt
 
 # agent tooling local state
 .playwright-mcp/
+
+.agents/
+AGENTS.md
+GEMINI.md

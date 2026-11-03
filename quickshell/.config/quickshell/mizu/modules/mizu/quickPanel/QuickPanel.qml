@@ -1097,6 +1097,14 @@ Scope {
         }
 
         function page(name: string): void {
+            if (name === "live2d" || name === "l2d") {
+                root.openSettings(root.focusedScreen())
+                Qt.callLater(() => {
+                    if (sstage.face && sstage.face.scrollToCard)
+                        sstage.face.scrollToCard("desktop", "Live2D")
+                })
+                return
+            }
             root.goSettingsPage(name)
             root.openSettings(root.focusedScreen())
         }

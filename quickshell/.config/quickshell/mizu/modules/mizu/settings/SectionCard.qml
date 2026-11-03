@@ -68,6 +68,7 @@ Item {
     readonly property string shownIcon: icon !== "" ? icon : (iconFor[title.toLowerCase()] || "star")
 
     implicitHeight: 30 + flow.implicitHeight + 30 + 4
+    height: implicitHeight
 
     // hard shadow
     Rectangle {
