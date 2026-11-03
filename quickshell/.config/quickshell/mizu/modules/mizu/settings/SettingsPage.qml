@@ -67,6 +67,17 @@ Item {
             scrollAnim.start()
         }
 
+        function scrollToCardTitle(title) {
+            const kids = column.children
+            for (let i = 0; i < kids.length; i++) {
+                const c = kids[i]
+                if (c.isSectionCard === true && c.title === title) {
+                    scrollToItem(c)
+                    break
+                }
+            }
+        }
+
         // ----- the jump chips -----
         // The titled cards that are showing, in order. Re-read when the column's
         // height or its children change (a card switched on or off).

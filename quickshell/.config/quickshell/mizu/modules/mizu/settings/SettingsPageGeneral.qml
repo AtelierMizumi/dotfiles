@@ -10,6 +10,24 @@ SettingsPage {
     id: page
 
     SectionCard {
+        title: "Language & Locale"
+
+        SettingChoice {
+            label: "Language"
+            sublabel: "Shell interface & Live2D display language"
+            current: SettingsService.get("system.language") || "vi"
+            options: [
+                { id: "vi", label: "Tiếng Việt", icon: "translate" },
+                { id: "en", label: "English", icon: "language" }
+            ]
+            onPicked: id => {
+                SettingsService.set("system.language", id)
+                L2dService.setLanguage(id)
+            }
+        }
+    }
+
+    SectionCard {
         title: "Time & alerts"
 
         SettingToggle {

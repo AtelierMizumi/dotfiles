@@ -12,6 +12,60 @@ Item {
     IpcHandler {
         target: "mizu"
 
+        // Live wallpaper host (mizu-l2d): comma-separated screen names it draws on; "" hands them back.
+        function liveWallpaper(screens: string): void {
+            WallpaperService.liveScreens = screens === "" ? [] : screens.split(",").map(s => s.trim())
+        }
+
+        function l2dEnable(on: bool): void {
+            L2dService.setEnabled(on)
+        }
+
+        function l2dToggle(): void {
+            L2dService.toggle()
+        }
+
+        function l2dModel(prefab: string): void {
+            L2dService.setModel(prefab)
+        }
+
+        function l2dTips(on: bool): void {
+            L2dService.setTips(on)
+        }
+
+        function l2dReset(): void {
+            L2dService.resetCamera()
+        }
+
+        function l2dLock(locked: bool): void {
+            L2dService.setPlacementLocked(locked)
+        }
+
+        function l2dToggleLock(): void {
+            L2dService.togglePlacementLocked()
+        }
+
+        function l2dLayout(mode: string): void {
+            L2dService.setLayout(mode)
+        }
+
+        function l2dPalette(): void {
+            L2dService.applyPalette(true)
+        }
+
+        function l2dCacheStatus(): string {
+            L2dService.refreshLedger()
+            return L2dService.cacheStatusText()
+        }
+
+        function l2dCacheEvict(prefab: string): void {
+            L2dService.cacheEvict(prefab)
+        }
+
+        function l2dCacheClean(): void {
+            L2dService.cacheClean()
+        }
+
         function launcher(): void {
             if (!root.launcher) return
             if (root.launcher.open) {

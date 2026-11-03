@@ -574,6 +574,20 @@ Item {
         })
     }
 
+    function scrollToCard(pageId, cardTitle) {
+        for (let i = 0; i < pages.length; i++) {
+            if (pages[i].id === pageId) {
+                go(i)
+                Qt.callLater(() => {
+                    const slot = pageRepeater.itemAt(i)
+                    if (slot && slot.item && slot.item.scrollToCardTitle)
+                        slot.item.scrollToCardTitle(cardTitle)
+                })
+                break
+            }
+        }
+    }
+
     function typeIntoSearch(character) {
         search.begin(character)
     }

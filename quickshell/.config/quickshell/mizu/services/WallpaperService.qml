@@ -37,6 +37,14 @@ Singleton {
     readonly property string defaultPath: root.current
     // Upstream raised the widgets above the wallpaper while it re-stacked; nothing here needs that.
     readonly property bool restacking: false
+
+    // Screens where a live wallpaper (the Azur Lane host, mizu-l2d) draws the desktop. There the static picture
+    // steps aside, and the desktop widgets move to the Bottom layer: above the live picture, below app windows.
+    // Set over IPC: qs ipc -c mizu call mizu liveWallpaper "eDP-1,HDMI-A-1" ("" hands the screens back).
+    property var liveScreens: []
+    function covered(screenName) {
+        return L2dService.running && root.liveScreens.indexOf(screenName) >= 0
+    }
     property bool folderPicking: false
 
     readonly property string stateScript: Directories.script("state/wallpaper-state.sh")
@@ -111,11 +119,24 @@ Singleton {
     function rescan() {
         lister.running = true
         folderLister.running = true
+        root.filesRev++
+        root.loadThumbs()
+        sweepDebounce.restart()
+    }
+
+    onDirectoryChanged: {
+        root.filesRev++
+        root.loadThumbs()
+        sweepDebounce.restart()
     }
 
     // Runs the palette tool for the current wallpaper. A run in progress finishes first, then the latest picture is done.
+    // While the Live2D wallpaper owns the theme (a model is up and "theme from character" is on) the static picture's
+    // palette waits: it is built by the next stop, on whatever picture is current then.
     function runPalette() {
         if (root.current === "")
+            return
+        if (L2dService.running && L2dService.liveTheme)
             return
         if (palette.running) {
             palette.again = true
@@ -126,13 +147,20 @@ Singleton {
     }
 
     readonly property string themeMode: SettingsService.get("theme.mode")
-    onThemeModeChanged: root.runPalette()
+    onThemeModeChanged: {
+        // A mode change regenerates whichever palette currently owns the theme.
+        if (L2dService.running && L2dService.liveTheme)
+            L2dService.applyPalette(false)
+        else
+            root.runPalette()
+    }
 
     // Start: the remembered pick, then the folder, then the palette if there is no token file yet.
     Component.onCompleted: {
         restorer.running = true
         lister.running = true
         folderLister.running = true
+        root.loadThumbs()
     }
 
     // Once both the remembered pick and the folder are known: nothing remembered means the first picture of the folder;
@@ -212,6 +240,81 @@ Singleton {
         onExited: {
             if (palette.again)
                 root.runPalette()
+        }
+    }
+
+    // ===== the picker's thumbnails =====
+    readonly property string thumbsScript: Directories.script("thumbnails/wallpaper-thumbs.sh")
+    property var thumbs: ({})
+    property string scanWanted: ""
+    property int filesRev: 0
+
+    function loadThumbs() {
+        const dir = root.directory
+        if (thumbScan.running) {
+            root.scanWanted = dir
+            return
+        }
+        root.scanWanted = dir
+        thumbScan.dir = dir
+        thumbScan.exec(["sh", root.thumbsScript, "scan", dir])
+    }
+
+    function sweepThumbs() {
+        if (thumbSweep.running)
+            return
+        thumbSweep.rev = root.filesRev
+        thumbSweep.exec(["nice", "-n", "19", "sh", root.thumbsScript, "make", root.rootDirectory])
+    }
+
+    Timer {
+        id: sweepDebounce
+        interval: 2000
+        onTriggered: root.sweepThumbs()
+    }
+
+    Process {
+        id: thumbScan
+        property string dir: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const map = Object.assign({}, root.thumbs)
+                const lines = text.split("\n")
+                let count = 0
+                for (let i = 0; i < lines.length; i++) {
+                    const parts = lines[i].split("\t")
+                    if (parts.length === 3 && parts[1] !== "" && parts[2] === "1") {
+                        map[parts[0]] = parts[1]
+                        count++
+                    }
+                }
+                root.thumbs = map
+            }
+        }
+        onExited: {
+            if (root.scanWanted !== "" && root.scanWanted !== thumbScan.dir) {
+                thumbScan.dir = root.scanWanted
+                thumbScan.exec(["sh", root.thumbsScript, "scan", root.scanWanted])
+            }
+        }
+    }
+
+    Process {
+        id: thumbSweep
+        property int rev: 0
+        stdout: SplitParser {
+            onRead: data => {
+                const parts = data.trim().split("\t")
+                if (parts.length === 3 && parts[0] === "ok") {
+                    const map = Object.assign({}, root.thumbs)
+                    map[parts[1]] = parts[2]
+                    root.thumbs = map
+                }
+            }
+        }
+        onExited: {
+            if (root.filesRev !== thumbSweep.rev)
+                root.sweepThumbs()
         }
     }
 

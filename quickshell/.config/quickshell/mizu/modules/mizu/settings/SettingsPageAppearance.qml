@@ -129,7 +129,7 @@ SettingsPage {
     // makes every missing thumb of the whole tree in the background, so every folder is
     // instant from then on.
     readonly property string thumbsScript: Directories.script("thumbnails/wallpaper-thumbs.sh")
-    property var thumbs: ({})
+    property var thumbs: WallpaperService.thumbs
     property string scanWanted: ""
     property int filesRev: 0
 
