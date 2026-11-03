@@ -384,6 +384,14 @@ SettingsPage {
         }
 
         SettingToggle {
+            icon: "speed"
+            label: "High refresh rate (60 FPS)"
+            detail: L2dService.currentFps === 60 ? "Smooth 60 FPS animation (Active). Toggle for 30 FPS power-save mode." : "Power-saving 30 FPS animation. Toggle for ultra-smooth 60 FPS."
+            checked: L2dService.currentFps === 60
+            onToggled: L2dService.toggleFps()
+        }
+
+        SettingToggle {
             icon: "power_settings_new"
             label: "Pause on fullscreen"
             detail: "Freeze rendering when an application is fullscreen to save GPU. Disable to keep animating under transparent acrylic windows and tiling gaps."
