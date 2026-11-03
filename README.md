@@ -39,7 +39,7 @@ Featuring a dual-shell architecture (**Mizu** via Quickshell & **Noctalia** fall
 
 ### 🎬 Live2D Motion & Interaction Preview (Richelieu — 60 FPS)
 
-https://github.com/user-attachments/assets/7837fc0f-4e84-4f66-b99b-69ee82536004
+https://github.com/AtelierMizumi/mizu-l2d/releases/download/v0.2.0-beta/model-preview.mp4
 
 </div>
 
