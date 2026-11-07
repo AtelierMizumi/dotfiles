@@ -28,6 +28,7 @@ claudeworks*.txt
 ClaudeWorks*.txt
 
 # agent tooling local state
+.claude/
 .playwright-mcp/
 
 .agents/

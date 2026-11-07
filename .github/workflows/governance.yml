@@ -1,0 +1,24 @@
+name: Governance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    name: Governance (AGENTS.md checkpoints)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run governance checkpoints
+        run: bash scripts/governance-check.sh
+      - name: Test governance harness
+        run: bash scripts/test-governance-check.sh
+      - name: "Run test suite - AGENTS.md gate command must exit 0"
+        run: bash tests/run-all.sh
