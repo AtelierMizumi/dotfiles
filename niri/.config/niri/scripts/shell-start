@@ -4,6 +4,11 @@
 # A clean exit (quit from the shell, `qs kill`) ends this script too. Five failures in a row, each within 30 s of
 # the start, mean it will not run: the script stops and says so, instead of looping at full speed.
 #
+# A shell that is alive but blind is restarted too: when the GPU context is lost (an NVIDIA reset, a suspend/resume)
+# Qt logs "Graphics device lost" and its bar/widget windows stop redrawing for good (clock, date and weather freeze,
+# only freshly opened popups still work). The process never exits, so the exit-code check above can't see it; the
+# shell's output is watched for that line instead and the shell is stopped, so the loop below starts a fresh one.
+#
 # MIZU_RESTART_DELAY (seconds, default 1) and MIZU_STABLE_SECONDS (default 30) exist for the tests.
 set -euo pipefail
 
@@ -39,13 +44,30 @@ dbus-update-activation-environment --systemd QT_QPA_PLATFORMTHEME="${QT_QPA_PLAT
 child=0
 trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 0' TERM INT HUP
 
+# Copies the shell's output through and tells the supervisor (USR1) when the GPU context was lost.
+watch_for_gpu_loss() {
+  local line
+  while IFS= read -r line; do
+    printf '%s\n' "$line"
+    if [[ "$line" == *"Graphics device lost"* ]]; then
+      kill -USR1 "$supervisor" 2>/dev/null || true
+    fi
+  done
+}
+supervisor=$$
+trap 'echo "shell-start: graphics device lost, restarting ${command[0]}" >&2; kill "$child" 2>/dev/null || true' USR1
+
 failures=0
 while true; do
   started=$SECONDS
-  env LC_TIME=ja_JP.UTF-8 QT_QPA_PLATFORMTHEME="${QT_QPA_PLATFORMTHEME:-kde}" "${command[@]}" &
+  env LC_TIME=ja_JP.UTF-8 QT_QPA_PLATFORMTHEME="${QT_QPA_PLATFORMTHEME:-kde}" "${command[@]}" > >(watch_for_gpu_loss) 2>&1 &
   child=$!
   code=0
   wait "$child" || code=$?
+  # A trapped USR1 ends the first wait early; wait again until the stopped shell is really gone.
+  while kill -0 "$child" 2>/dev/null; do
+    wait "$child" || code=$?
+  done
   if [[ $code -eq 0 ]]; then
     exit 0
   fi
