@@ -155,6 +155,20 @@ class RemovedModulesTest(unittest.TestCase):
         orphans = [str(p.relative_to(MIZU)) for p in MIZU.rglob("*.qsb") if not p.with_suffix("").exists()]
         self.assertEqual(orphans, [], f"qsb files without source: {orphans}")
 
+    def test_logs_of_outside_text_cannot_start_a_new_log_line(self):
+        """shell-start restarts the shell on a `WARN: Graphics device lost` line, so text from the web (media title,
+        art url, tray ids) must have its line breaks replaced before it reaches console.log / console.warn."""
+        sites = {
+            "services/MediaSource.qml": '"[media] "',
+            "services/TraySource.qml": '"[tray] " + items.length',
+            "modules/mizu/bar/MediaPill.qml": "couldn't load cover art from",
+        }
+        for rel, marker in sites.items():
+            text = (MIZU / rel).read_text()
+            start = text.index(marker)
+            call = text[start:start + 160]
+            self.assertIn(r"replace(/[\r\n]+/g", call, f"{rel}: unsanitised log of outside text: {call}")
+
 
 if __name__ == "__main__":
     unittest.main()

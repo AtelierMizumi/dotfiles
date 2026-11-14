@@ -22,8 +22,8 @@ Scope {
 
     readonly property var items: SystemTray.items.values
 
-    onItemsChanged: console.log("[tray] " + items.length + " item(s) in the system tray: "
-        + items.map(i => i.id).join(", "))
+    onItemsChanged: console.log(("[tray] " + items.length + " item(s) in the system tray: "
+        + items.map(i => i.id).join(", ")).replace(/[\r\n]+/g, " "))
 
     property var pinnedIds: []
     readonly property var pinnedItems: items.filter(i => pinnedIds.indexOf(i.id) !== -1)

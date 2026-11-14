@@ -199,7 +199,7 @@ Pill {
 
                         onStatusChanged: {
                             if (status === Image.Error)
-                                console.warn("MediaPill: couldn't load cover art from " + source)
+                                console.warn(("MediaPill: couldn't load cover art from " + source).replace(/[\r\n]+/g, " "))
                         }
                     }
                 }

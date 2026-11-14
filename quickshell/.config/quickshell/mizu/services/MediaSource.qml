@@ -52,7 +52,7 @@ Scope {
         return direct !== "" ? direct : youtubeThumbnail()
     }
 
-    onArtUrlChanged: console.log("[media] " + title + " | art: " + (artUrl !== "" ? artUrl : "(none)"))
+    onArtUrlChanged: console.log(("[media] " + title + " | art: " + (artUrl !== "" ? artUrl : "(none)")).replace(/[\r\n]+/g, " "))
 
     function youtubeThumbnail() {
         const md = player.metadata
