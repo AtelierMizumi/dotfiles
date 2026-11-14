@@ -76,7 +76,17 @@ t_a_healthy_shell_is_not_restarted() {
   [[ $(wc -l <"$RUNS") -eq 1 ]] || fail "healthy shell restarted (runs: $(wc -l <"$RUNS"))"
 }
 
+# The shell logs media titles ("DEBUG qml: [media] <title>"); a title must not be able to restart the shell.
+t_a_media_title_cannot_trigger_a_restart() {
+  setup_sandbox
+  trap 'rm -rf "$TMP"' EXIT
+  sed -i 's/echo "WARN: Graphics device lost,/echo "DEBUG qml: [media] Graphics device lost,/' "$TMP/bin/qs"
+  run_supervisor
+  [[ $(wc -l <"$RUNS") -eq 1 ]] || fail "a log line from QML restarted the shell (runs: $(wc -l <"$RUNS"))"
+}
+
 run_test t_restarts_the_shell_when_the_graphics_device_is_lost
+run_test t_a_media_title_cannot_trigger_a_restart
 run_test t_a_healthy_shell_is_not_restarted
 
 echo "RESULT passed=$passed failed=$failed skipped=0"

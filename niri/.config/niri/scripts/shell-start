@@ -45,11 +45,14 @@ child=0
 trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; exit 0' TERM INT HUP
 
 # Copies the shell's output through and tells the supervisor (USR1) when the GPU context was lost.
+# Only Qt's own warning counts: anchored at the start of the line (after an optional timestamp), so the QML
+# "DEBUG qml: [media] <title>" lines, whose text comes from the web, cannot trigger a restart.
+gpu_lost_re='^([0-9-]+ [0-9:.]+ +)?WARN: Graphics device lost, cleaning up scenegraph'
 watch_for_gpu_loss() {
   local line
   while IFS= read -r line; do
     printf '%s\n' "$line"
-    if [[ "$line" == *"Graphics device lost"* ]]; then
+    if [[ "$line" =~ $gpu_lost_re ]]; then
       kill -USR1 "$supervisor" 2>/dev/null || true
     fi
   done
