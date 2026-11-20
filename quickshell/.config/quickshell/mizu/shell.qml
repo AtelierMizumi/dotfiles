@@ -100,6 +100,7 @@ ShellRoot {
     QuickSource {
         id: quickState
         active: panel.up || panel.settingsShown
+        networkWanted: SettingsService.flag("bar.visible") && SettingsService.flag("bar.resources")
     }
 
     NotificationSource {
@@ -173,6 +174,7 @@ ShellRoot {
         }
         Bar {
             traySource: trayState
+            networkSource: quickState
             quickPanel: panel
             picker: wallpaperEntry
         }

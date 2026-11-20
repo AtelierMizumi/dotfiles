@@ -243,6 +243,8 @@ Item {
     readonly property bool capsuleVertical: status_Bar.capsule && status_Bar.vertical
 
     // CPU/RAM, fed by ResourceSource.qml via Bar.qml.
+    property real downloadBps: 0
+    property real uploadBps: 0
     property real cpuPercent: 0
     property real memPercent: 0
 
@@ -756,6 +758,8 @@ Item {
             vertical: status_Bar.vertical
             Layout.alignment: status_Bar.crossAlign
             transform: Translate { y: status_Bar.liftY }
+            downloadBps: status_Bar.downloadBps
+            uploadBps: status_Bar.uploadBps
             cpuPercent: status_Bar.cpuPercent
             memPercent: status_Bar.memPercent
             barPosition: status_Bar.barPosition

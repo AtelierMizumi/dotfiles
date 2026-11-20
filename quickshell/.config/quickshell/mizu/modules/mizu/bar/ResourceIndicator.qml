@@ -3,6 +3,7 @@ import Quickshell
 import QtQuick.Layouts
 import qs.modules.common
 import qs.modules.common.widgets
+import "NetworkRate.js" as NetworkRate
 
 // Pure UI (no Quickshell imports): Status_Bar.qml feeds this the two
 // numbers from ResourceSource.qml. Two small badges — CPU and RAM,
@@ -15,6 +16,8 @@ Item {
     // This monitor's theme: Theme.of() gives the shell's own unless the monitor has one.
     readonly property var mt: Theme.of(QsWindow.window)
 
+    property real downloadBps: 0
+    property real uploadBps: 0
     property real cpuPercent: 0
     property real memPercent: 0
     property string memUsedLabel: "--"
@@ -28,7 +31,7 @@ Item {
     property string barPosition: "top"
 
     // What the hover tag says.
-    readonly property string tipText: "CPU " + Math.round(root.cpuPercent) + "% · RAM " + Math.round(root.memPercent) + "%"
+    readonly property string tipText: "CPU " + Math.round(root.cpuPercent) + "% · RAM " + Math.round(root.memPercent) + "% · ↓ " + NetworkRate.format(root.downloadBps) + " · ↑ " + NetworkRate.format(root.uploadBps)
 
     signal clicked()
 
@@ -116,6 +119,16 @@ Item {
                     font.styleName: mt.fontStyleBold
                 }
             }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "↓ " + NetworkRate.format(root.downloadBps) + "\n↑ " + NetworkRate.format(root.uploadBps)
+                horizontalAlignment: Text.AlignHCenter
+                color: mt.chipInk
+                font.family: mt.fontFamily
+                font.pixelSize: mt.fontSizeInfo
+                font.weight: Font.ExtraBold
+            }
+
         }
 
         RowLayout {
@@ -158,6 +171,14 @@ Item {
                     font.weight: Font.ExtraBold
                     font.styleName: mt.fontStyleBold
                 }
+            }
+            Text {
+                text: "↓ " + NetworkRate.format(root.downloadBps) + "  ↑ " + NetworkRate.format(root.uploadBps)
+                color: mt.chipInk
+                font.family: mt.fontFamily
+                font.pixelSize: mt.fontSizeInfo
+                font.weight: Font.ExtraBold
+                font.styleName: mt.fontStyleBold
             }
         }
     }

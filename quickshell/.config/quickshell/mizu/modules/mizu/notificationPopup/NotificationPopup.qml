@@ -17,9 +17,8 @@ import qs.modules.common.widgets
 // then be dropped (drop(), when the card says finished()).
 //
 // Where: like the reload report (ReloadPopup.qml): top-right, clear of the
-// bar (a top bar pushes it down, a right bar pushes it left); with the bar
-// at the bottom it goes to the bottom-right corner, above the bar, and the
-// stack grows upward. One persistent window per screen, but only the
+// bar (a top bar pushes it down, a right bar pushes it left). The stack
+// stays at the top-right and grows downward. One persistent window per screen, but only the
 // monitor that was focused when the stack started to fill (source.popupMonitor)
 // shows it. The window is as tall as maxPopups cards; only the cards
 // themselves take the pointer (the mask), the rest of it lets clicks through.
@@ -35,14 +34,14 @@ Variants {
 
     // The card is drawn at its design size (cardW x cardH) and the whole
     // stack is then shrunk by this (1 = the old size).
-    readonly property real compact: 0.78
+    readonly property real compact: 0.74
     readonly property real cardW: 420
     readonly property real cardH: 104
     readonly property real shadowX: 5
     readonly property real shadowY: 4
-    readonly property real cardGap: 12      // between cards
-    readonly property int gap: 14           // from the bar
-    readonly property int maxCards: root.source ? root.source.maxPopups : 4
+    readonly property real cardGap: 10      // between cards
+    readonly property int gap: 10           // from the bar
+    readonly property int maxCards: root.source ? root.source.maxPopups : 3
 
     model: Quickshell.screens
 
@@ -55,7 +54,7 @@ Variants {
         readonly property real uiScale: ShellScale.forScreen(win.screen)
         readonly property real cardScale: win.uiScale * root.compact
         readonly property string barPosition: BarPositionService.position
-        readonly property bool atBottom: win.barPosition === "bottom"
+        readonly property bool atBottom: false
         readonly property real barOffset: Math.round((BarPositionService.thickness + root.gap) * win.uiScale)
         readonly property real edgeGap: Math.round(16 * win.uiScale)
 
@@ -137,7 +136,7 @@ Variants {
                     continue
                 notices.insert(0, {
                     key: e.key,
-                    app: e.app,
+                    app: e.app + (e.groupCount > 1 ? " · " + e.groupCount : ""),
                     title: e.title,
                     body: e.body,
                     urgency: e.urgency,

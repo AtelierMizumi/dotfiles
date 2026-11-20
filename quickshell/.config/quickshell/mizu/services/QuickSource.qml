@@ -134,12 +134,6 @@ Scope {
         if (active) {
             refresh()
         } else {
-            // Forget the last sample so reopening the panel doesn't spread
-            // one giant delta over however long it was closed.
-            netLastRx = -1
-            netLastTx = -1
-            downloadBps = 0
-            uploadBps = 0
             // Closing the panel ends edit mode, so it never reopens half-edited.
             editing = false
         }
@@ -239,6 +233,15 @@ Scope {
     }
 
     // ===== internet speed =====
+    property bool networkWanted: false
+    readonly property bool networkPolling: active || networkWanted
+    onNetworkPollingChanged: if (!networkPolling) {
+        netLastRx = -1
+        netLastTx = -1
+        downloadBps = 0
+        uploadBps = 0
+    }
+
     property real downloadBps: 0
     property real uploadBps: 0
     property real netLastRx: -1
@@ -248,7 +251,7 @@ Scope {
     Timer {
         interval: 1000
         repeat: true
-        running: root.active
+        running: root.networkPolling
         triggeredOnStart: true
         onTriggered: {
             netDev.reload()

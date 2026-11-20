@@ -28,6 +28,7 @@ PanelWindow {
 
     // The shell-wide tray (see shell.qml): what apps have put in the
     // system tray, and which ones are pinned.
+    required property var networkSource
     required property var traySource
 
     // The shell-wide Quick Panel (see shell.qml); the notification bell opens it.
@@ -708,6 +709,8 @@ PanelWindow {
 
                 cpuPercent: resourceSource.cpuPercent
                 memPercent: resourceSource.memPercent
+                downloadBps: win.networkSource.downloadBps
+                uploadBps: win.networkSource.uploadBps
                 onResourcesClicked: win.toggleResourcePopup()
 
                 // "--" until the first fetch lands (or if curl/the network

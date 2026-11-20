@@ -1,8 +1,10 @@
+import "NotificationPopupPolicy.js" as PopupPolicy
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
 import QtQuick
+import qs.services
 
 // The system side of notifications — with MediaSource.qml and
 // QuickSource.qml, one of the files that talk to the system. It makes the
@@ -102,7 +104,7 @@ Scope {
     // (key -> true while the pointer is on it) are plain bookkeeping.
     property var popups: []
     property string popupMonitor: ""
-    property int maxPopups: 4
+    property int maxPopups: 3
     property var popupLeft: ({})
     property var popupHeld: ({})
 
@@ -379,7 +381,7 @@ Scope {
         // Silent: still in the list, but nothing announces it. A screenshot's
         // own "copied" / "saved" note (the preview card already says so), and
         // everything while Edit Desktop is open (it would sit on the board).
-        const quiet = EditMode.active || isScreenshotNote(e)
+        const quiet = EditMode.active || LockState.phase !== "idle" || isScreenshotNote(e)
         if (!quiet && (!root.held || e.urgency === 2)) {
             if (alertStyle === "popups") {
                 if (!popupsSuppressed)
@@ -548,8 +550,7 @@ Scope {
     // How long an announcement stays (toast or popup): long ones a little
     // longer, critical ones longer still.
     function readMs(entry) {
-        const ms = 3500 + (entry.title.length + entry.body.length) * 45 + (entry.urgency === 2 ? 4000 : 0)
-        return Math.min(12000, Math.max(4500, ms))
+        return PopupPolicy.readMs(entry)
     }
 
     function hideToast() {
@@ -567,14 +568,13 @@ Scope {
         if (popups.length === 0)
             popupMonitor = Compositor.focusedOutput !== "" ? Compositor.focusedOutput
                 : (Quickshell.screens.length > 0 ? Quickshell.screens[0].name : "")
-        const list = [entry].concat(popups)
-        while (list.length > maxPopups) {
-            const old = list.pop()
+        const result = PopupPolicy.add(popups, entry, maxPopups)
+        for (const old of result.removed) {
             delete popupLeft[old.key]
             delete popupHeld[old.key]
         }
         popupLeft[entry.key] = readMs(entry)
-        popups = list
+        popups = result.list
     }
 
     // Closes popups only: the notifications stay in the history.
@@ -638,6 +638,17 @@ Scope {
         repeat: true
         running: root.popups.length > 0
         onTriggered: root.tickPopups()
+    }
+
+    // Drop announcements before locking, and never replay messages received while locked.
+    Connections {
+        target: LockState
+        function onPhaseChanged() {
+            if (LockState.phase !== "idle") {
+                root.clearPopups()
+                root.hideToast()
+            }
+        }
     }
 
     // Switched from one style to the other in Settings: put the other
