@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# niri-render-gpu {status|nvidia|intel|default} — chọn GPU mà niri dùng để RENDER (debug.render-drm-device).
+#   nvidia : niri render trên NVIDIA  => màn hình HDMI (nối NVIDIA) xuất TRỰC TIẾP; màn hình trong (Intel eDP) phải copy.
+#   intel  : niri render trên Intel   => màn hình trong xuất TRỰC TIẾP; HDMI phải copy sang NVIDIA.
+#   default: bỏ ghi đè (niri tự chọn).
+# Cấu hình nằm ở ~/.config/niri/gpu.kdl (được include từ config.kdl). CẦN ĐĂNG XUẤT/ĐĂNG NHẬP LẠI để có hiệu lực.
+set -u
+G="$HOME/.config/niri/gpu.kdl"
+vendor_of(){ cat "$1/device/vendor" 2>/dev/null; }
+node_for(){ local want="$1" r; for r in /sys/class/drm/renderD*; do [ "$(vendor_of "$r")" = "$want" ] && { echo "/dev/dri/$(basename "$r")"; return; }; done; }
+NV="$(node_for 0x10de)"; IN="$(node_for 0x8086)"
+status(){
+  echo "== GPU:"; for r in /sys/class/drm/renderD*; do v=$(vendor_of "$r"); n=$([ "$v" = 0x10de ] && echo NVIDIA || { [ "$v" = 0x8086 ] && echo Intel || echo "?$v"; }); echo "   /dev/dri/$(basename "$r") = $n"; done
+  echo "== Màn hình nối với GPU nào (connected):"
+  for c in /sys/class/drm/card*-*; do [ "$(cat "$c/status" 2>/dev/null)" = connected ] || continue; card="${c%%-*}"; v=$(vendor_of "$card"); echo "   $(basename "$c" | sed 's/^card[0-9]*-//') -> $([ "$v" = 0x10de ] && echo NVIDIA || echo Intel)"; done
+  echo "== Cấu hình ($G):"; grep -v '^\s*//' "$G" 2>/dev/null | grep -E 'render-drm-device' || echo "   (không ghi đè — niri tự chọn)"
+  p=$(pgrep -x niri | head -1); echo "== niri ĐANG mở thiết bị render:"; [ -n "$p" ] && ls -l /proc/$p/fd 2>/dev/null | grep -o '/dev/dri/renderD[0-9]*' | sort -u | sed 's/^/   /'
+}
+write(){ printf '// Quản lý bởi niri-render-gpu (%s). Cần đăng xuất/đăng nhập lại.\ndebug {\n    render-drm-device "%s"\n}\n' "$1" "$2" > "$G"; }
+case "${1:-status}" in
+  nvidia)  [ -n "$NV" ] || { echo "không thấy NVIDIA"; exit 1; }; write nvidia "$NV";;
+  intel)   [ -n "$IN" ] || { echo "không thấy Intel"; exit 1; }; write intel "$IN";;
+  default) printf '// niri-render-gpu: không ghi đè (niri tự chọn GPU render).\n' > "$G";;
+  status)  status; exit 0;;
+  *) sed -n '2,7p' "$0"; exit 2;;
+esac
+niri validate 2>&1 | grep -E 'valid|rror' | tail -1; status; echo; echo ">> Đăng xuất và đăng nhập lại để áp dụng thay đổi."

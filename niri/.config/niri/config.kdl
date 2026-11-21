@@ -766,3 +766,6 @@ debug {
 // Focus-ring colors from the wallpaper palette, rendered by Noctalia's niri-colors user template. Includes are
 // positional, so this stays after the layout block; optional because the file only exists after the first render.
 include optional=true "colors.kdl"
+
+// GPU render override for osu! A/B tests. Managed by scripts/niri-render-gpu; optional, so a missing file changes nothing.
+include optional=true "gpu.kdl"
